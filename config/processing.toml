@@ -1,0 +1,18 @@
+[calibration]
+gain = 1.0
+offset = 0.0
+
+[bandpass]
+low_cutoff = 10.0    # Hz
+high_cutoff = 5000.0 # Hz
+order = 4
+
+[notch]
+frequencies = [60.0, 120.0, 180.0]  # Hz
+quality = 30.0
+
+[sampling]
+rate = 100000.0  # Hz
+
+[integration]
+baseline_window = 50
