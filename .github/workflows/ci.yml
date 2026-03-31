@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install OFT
+        run: |
+          curl -sL "https://github.com/OpenFUSIONToolkit/OpenFUSIONToolkit/releases/download/v1.0.0-beta7/OpenFUSIONToolkit_v1.0.0-beta7-Ubuntu_22_04-GNU-x86_64.tar.gz" | tar xz -C /tmp
+          echo "OFT_PATH=/tmp/OpenFUSIONToolkit" >> $GITHUB_ENV
+          echo "PYTHONPATH=/tmp/OpenFUSIONToolkit/python:$PYTHONPATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=/tmp/OpenFUSIONToolkit/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "/tmp/OpenFUSIONToolkit/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: ruff lint
+        run: ruff check src/ tests/
+
+      - name: mypy type check
+        run: mypy src/
+
+      - name: pytest
+        run: pytest tests/ --tb=short
+        env:
+          PYTHONPATH: "/tmp/OpenFUSIONToolkit/python:${{ github.workspace }}"

@@ -12,10 +12,11 @@ build/
 venv/
 env/
 
-# Data (large files, generated)
-data/raw/
-data/processed/
-data/synthetic/
+# Data (large files, generated — keep .gitkeep)
+data/raw/*
+data/processed/*
+data/synthetic/*
+!data/**/.gitkeep
 
 # Jupyter
 .ipynb_checkpoints/
