@@ -9,13 +9,15 @@ An end-to-end pipeline that ingests raw magnetic sensor data from the CUTE spher
 ## DAG
 
 ```
-Phase 1  ───►  Phase 2  ───►  Phase 3a  ───►  Phase 5  ───►  Phase 6a  ───►  Phase 7
-                              Phase 3b  ───►  Phase 5         Phase 6b  ───►  Phase 7
-                              Phase 3c  ───►  Phase 5
+Phase 1  ───►  Phase 2  ───►  Phase 3a  ───►  Phase 5  ───►  Phase 6a  ───►  Phase 7  ───►  Phase 8a ───► Phase 9
+                              Phase 3b  ───►  Phase 5         Phase 6b  ───►  Phase 7        Phase 8b ───► Phase 9
+                              Phase 3c  ───►  Phase 5                                        Phase 8c ───► Phase 9
                                                               Phase 4   (anytime after Phase 2)
 ```
 
 - Phases 3a/3b/3c are independent of each other (parallel)
+- Phases 8a/8b/8c are independent of each other (parallel), all depend on Phase 7
+- Phase 9 depends on all of 8a/8b/8c
 - Phases 6a/6b are independent of each other (parallel)
 - Phase 4 can be done anytime after Phase 2
 
@@ -53,7 +55,12 @@ src/
 ├── forward/          # Phase 3a
 ├── signal/           # Phase 3b
 ├── store/            # Phase 3c
-├── reconstruct/      # Phase 5
+├── reconstruct/      # Phase 5, 8a, 8b
+│   ├── greens.py     # Phase 8a: Green's function matrix
+│   ├── efit.py       # Phase 8a: EFIT-style reconstruction
+│   └── eddy.py       # Phase 8b: Eddy current compensation
+├── validation/       # Phase 6b, 8c
+│   └── sensor_placement.py  # Phase 8c
 └── dashboard/        # Phase 6a
 tests/
 notebooks/
@@ -476,6 +483,233 @@ data/
 
 ---
 
+## Phase 8a: Green's Function Matrix & EFIT-Style Reconstruction
+
+**Depends on:** Phase 7 (all prior phases complete)
+**Goal:** Replace the constraint-based reconstruction with a proper inverse-problem solver that works from raw measurements alone — no isoflux hints, no X-point locations, no Ip target.
+**One-shot scope:** ~6-8 hours
+
+### Why this matters
+
+The Phase 5 reconstruction re-solves the Grad-Shafranov equation with the same constraints (isoflux points, saddle points, Ip target) used to generate the synthetic data. A real experiment provides only sensor voltages. This phase builds the machinery to go from voltages to equilibrium without any prior knowledge of the plasma shape.
+
+### Do this
+
+1. **Compute Green's function matrix** in `src/reconstruct/greens.py`:
+   - For each of the 28 coils: set unit current (all others zero), set Ip=0 (no plasma), solve vacuum field
+   - Evaluate ψ at all 56 flux loop locations and B at all 74 Mirnov probe locations
+   - Store as a 130×28 matrix `G_coils`
+   - Cache the matrix to `data/greens_matrix.h5` — it depends only on geometry, compute once
+   - Also compute a "plasma Green's function" by running the reference equilibrium with zero coil currents and unit Ip → `G_plasma` (130×1 vector)
+
+2. **Implement EFIT-style reconstruction** in `src/reconstruct/efit.py`:
+   ```
+   function efit_reconstruct(measurements, G_coils, G_plasma, mesh):
+       # Initial guess: vacuum field
+       I_coils = G_coils⁺ * measurements        # least-squares vacuum fit
+       y_plasma = 0
+
+       for iteration in range(max_iter):
+           # Solve GS equation with current coil currents
+           set_coil_currents(I_coils)
+           set_targets(Ip=Ip_estimate)
+           solve()
+
+           # Compute plasma contribution to measurements
+           y_total = forward_model(equilibrium)
+           y_vacuum = G_coils * I_coils
+           y_plasma = y_total - y_vacuum
+
+           # Re-fit coil currents accounting for plasma
+           I_coils = G_coils⁺ * (measurements - y_plasma)
+
+           # Update Ip estimate from the fit
+           Ip_estimate = extract_Ip(equilibrium)
+
+           # Check convergence
+           residual = measurements - forward_model(equilibrium)
+           if norm(residual) < tolerance:
+               break
+
+       return equilibrium, diagnostics
+   ```
+
+3. **Regularization**: Use Tikhonov regularization `(G^T G + λI)^{-1} G^T` with λ chosen by L-curve or GCV to handle the ill-conditioned inverse problem. Enforce physical constraints: coil currents within hardware limits, up-down symmetry where appropriate.
+
+4. **Wire into CLI**: `cute-reconstruct --method efit` uses the new solver (default), `--method constraint` falls back to Phase 5 solver.
+
+5. **Iterative testing procedure** — build confidence incrementally:
+   - **Step 1**: Verify Green's function matrix is correct by checking `G * I_true ≈ y_vacuum_true` for known coil currents
+   - **Step 2**: Verify vacuum-only reconstruction (no plasma) recovers coil currents exactly
+   - **Step 3**: Verify full reconstruction with clean synthetic data recovers the reference equilibrium
+   - **Step 4**: Verify reconstruction with noisy data degrades gracefully
+
+### Acceptance Gate
+
+| ID | Type | Criterion | Verification |
+|----|------|-----------|--------------|
+| 8a.1 | `[AUTO]` | Green's function matrix has correct shape | `tests/test_greens.py::test_greens_matrix_shape` — Assert `G_coils.shape == (130, 28)` and no NaN/Inf values |
+| 8a.2 | `[AUTO]` | Green's function matrix is physically correct | `tests/test_greens.py::test_greens_vacuum_consistency` — Set known coil currents, solve vacuum field, evaluate at sensors. Assert `G_coils @ I_coils` matches sensor values within 0.1% |
+| 8a.3 | `[AUTO]` | Green's function matrix is cached and loadable | `tests/test_greens.py::test_greens_cache_roundtrip` — Compute G, save to HDF5, reload, assert matrices are identical |
+| 8a.4 | `[AUTO]` | Vacuum-only reconstruction: exact coil recovery | `tests/test_efit.py::test_vacuum_coil_recovery` — Generate sensor values from known coil currents (no plasma). Reconstruct. Assert recovered coil currents match true values within 1% for each coil |
+| 8a.5 | `[AUTO]` | EFIT reconstruction: zero-noise flux loop roundtrip | `tests/test_efit.py::test_efit_zero_noise_flux_roundtrip` — Generate clean synthetic signals from reference equilibrium. Reconstruct using EFIT method (no isoflux hints). Assert max flux loop error < 0.5% of signal range |
+| 8a.6 | `[AUTO]` | EFIT reconstruction: zero-noise Ip recovery | `tests/test_efit.py::test_efit_zero_noise_ip` — Same setup. Assert `abs(recon_Ip - true_Ip) / true_Ip < 0.02` (2% error) |
+| 8a.7 | `[AUTO]` | EFIT reconstruction: zero-noise boundary recovery | `tests/test_efit.py::test_efit_zero_noise_boundary` — Assert max boundary point error < 1.0 cm |
+| 8a.8 | `[AUTO]` | EFIT reconstruction: noisy data degrades gracefully | `tests/test_efit.py::test_efit_noisy_degradation` — Reconstruct at SNR=∞, 20dB, 10dB. Assert error increases monotonically. Assert Ip error at SNR=10dB < 10% |
+| 8a.9 | `[AUTO]` | EFIT convergence: bounded iterations | `tests/test_efit.py::test_efit_convergence` — Assert EFIT converges in < 30 iterations for reference equilibrium |
+| 8a.10 | `[AUTO]` | Regularization: condition number is controlled | `tests/test_efit.py::test_regularization` — Assert condition number of regularized `G^T G + λI` is < 1e6 |
+| 8a.11 | `[AUTO]` | EFIT produces complete diagnostics | `tests/test_efit.py::test_efit_diagnostics` — Assert result contains chi_squared, per_sensor_residual (130 entries), condition_number, coil_currents (28 entries), iteration count |
+| 8a.12 | `[SCRIPT]` | CLI supports `--method efit` | `cute-reconstruct --method efit --shot data/synthetic/shot_001.h5 --output /tmp/efit_test.h5 && python -c "import h5py; f=h5py.File('/tmp/efit_test.h5','r'); assert 'equilibrium' in f; print('ok')"` exits 0 |
+| 8a.13 | `[HUMAN]` | EFIT reconstruction matches constraint-based reconstruction | Plot both reconstructions side by side for the reference equilibrium. Do the flux surfaces, boundary, and Ip agree qualitatively? |
+
+---
+
+## Phase 8b: Vacuum Vessel Eddy Current Compensation
+
+**Depends on:** Phase 7
+**Goal:** Model the VV eddy current response and subtract it from measurements before reconstruction, so that time-varying signals (ramp-up, ramp-down, disruptions) reconstruct accurately.
+**One-shot scope:** ~4-5 hours
+
+### Why this matters
+
+CUTE's vacuum vessel has finite resistivity (η = 1.26×10⁻⁵ Ω·m). During plasma current ramps, eddy currents are induced in the VV. These eddy currents produce additional magnetic flux that sensors measure but the equilibrium reconstruction doesn't account for. Every spherical torus (NSTX-U, MAST-U, START) has struggled with this — solving it early for CUTE is high-value.
+
+### Do this
+
+1. **Compute vessel impulse response** in `src/reconstruct/eddy.py`:
+   - Run a time-dependent TokaMaker solve with a step change in coil currents (e.g., CS coil step) and VV conductors active
+   - Record the VV-induced flux at each sensor location over time
+   - This gives the vessel transfer function: `H_vv(t)` — how VV eddy currents decay after an impulse
+   - Fit an exponential decay model: `H_vv(t) = Σ_k A_k * exp(-t/τ_k)` with 2-3 time constants
+
+2. **Implement eddy current subtraction** in `src/reconstruct/eddy.py`:
+   ```
+   function compensate_eddy(measurements_timeseries, H_vv):
+       # For each time slice, compute the eddy contribution
+       # by convolving the coil current changes with H_vv
+       y_eddy(t) = convolve(dI_coils/dt, H_vv)
+       y_corrected(t) = measurements(t) - y_eddy(t)
+       return y_corrected
+   ```
+
+3. **Store the vessel response model** as a `VesselResponse` dataclass:
+   - Time constants τ_k
+   - Amplitude matrix A_k (per sensor, per mode)
+   - Save/load from HDF5
+
+4. **Iterative testing procedure**:
+   - **Step 1**: Verify that a TD solve with VV conductors produces non-zero eddy currents at sensor locations
+   - **Step 2**: Verify the exponential fit captures the decay behavior (R² > 0.95)
+   - **Step 3**: Verify that eddy-compensated measurements improve reconstruction accuracy during a current ramp
+   - **Step 4**: Verify that eddy compensation has no effect on steady-state measurements (as expected)
+
+### Acceptance Gate
+
+| ID | Type | Criterion | Verification |
+|----|------|-----------|--------------|
+| 8b.1 | `[AUTO]` | VV eddy currents are non-zero during transients | `tests/test_eddy.py::test_eddy_nonzero` — Run TD solve with CS coil step. Assert VV contribution to at least 10 sensors exceeds 1% of total signal |
+| 8b.2 | `[AUTO]` | Vessel response has physical time constants | `tests/test_eddy.py::test_vessel_time_constants` — Fit exponential decay to VV response. Assert all τ_k are in range [100μs, 100ms] (physical for a tokamak VV) |
+| 8b.3 | `[AUTO]` | Exponential fit quality | `tests/test_eddy.py::test_exponential_fit_quality` — Assert R² > 0.95 for the multi-exponential fit of the vessel response at each sensor |
+| 8b.4 | `[AUTO]` | Vessel response is cacheable | `tests/test_eddy.py::test_vessel_response_roundtrip` — Save VesselResponse to HDF5, reload, assert all fields match |
+| 8b.5 | `[AUTO]` | Eddy compensation improves ramp reconstruction | `tests/test_eddy.py::test_eddy_compensation_improves_ramp` — Generate synthetic ramp-up measurements with VV eddy currents included. Reconstruct with and without eddy compensation. Assert compensated chi² < uncompensated chi² |
+| 8b.6 | `[AUTO]` | Eddy compensation is identity for steady-state | `tests/test_eddy.py::test_eddy_compensation_steady_state` — For steady-state measurements (no dI/dt), assert compensated == uncompensated within floating-point tolerance |
+| 8b.7 | `[AUTO]` | Eddy compensation preserves signal structure | `tests/test_eddy.py::test_eddy_preserves_signal` — After compensation, assert no NaN/Inf values and signal RMS is within 50% of original (compensation shouldn't destroy the signal) |
+| 8b.8 | `[HUMAN]` | Eddy current documentation is clear | Does `docs/eddy_currents.md` explain what eddy currents are, why they matter for CUTE, and how the compensation works, in terms a new grad student could follow? |
+
+---
+
+## Phase 8c: Sensor Placement Optimization
+
+**Depends on:** Phase 7 (uses Green's function matrix from 8a if available, but can compute its own)
+**Goal:** Determine which sensor locations maximize reconstruction accuracy and identify the minimum viable sensor set — directly informing CUTE hardware design decisions.
+**One-shot scope:** ~4-5 hours
+
+### Why this matters
+
+CUTE is still being designed and built. Sensor placement decisions are being made now. Every flux loop and Mirnov probe requires a vacuum feedthrough, cabling, and amplifier electronics. Answering "which sensors matter most?" and "what's the minimum set for good reconstruction?" saves hardware cost and guides the diagnostic design.
+
+### Do this
+
+1. **Implement sensor importance ranking** in `src/validation/sensor_placement.py`:
+   - Compute the Fisher information matrix `F = G^T W G` where W is a measurement weight matrix (inverse noise covariance)
+   - Rank sensors by their marginal information contribution: how much does removing sensor i increase the Cramér-Rao bound on key parameters (Ip, boundary R, q95)?
+   - Use the diagonal of `(G^T G)^{-1}` as a proxy for parameter uncertainty
+
+2. **Leave-one-out analysis**:
+   - For each of the 130 sensors, remove it and reconstruct the reference equilibrium
+   - Record the change in Ip error, boundary error, and chi²
+   - Rank sensors by reconstruction degradation when removed
+   - Identify the top-10 most critical sensors
+
+3. **Minimum viable sensor set**:
+   - Greedy forward selection: start with no sensors, add the one that most reduces reconstruction error, repeat
+   - Find the "knee" — the minimum number of sensors where adding more gives diminishing returns
+   - Report: "N sensors are sufficient for Ip error < X% and boundary error < Y cm"
+
+4. **Sensor type analysis**:
+   - Compare reconstruction quality with flux loops only, Mirnov probes only, and both
+   - Quantify the complementarity of the two sensor types
+
+5. **Output**: `notebooks/sensor_placement.ipynb` with all figures and recommendations
+
+6. **Iterative testing procedure**:
+   - **Step 1**: Verify Fisher information matrix is symmetric positive semi-definite
+   - **Step 2**: Verify leave-one-out analysis produces a ranking (not all sensors equally important)
+   - **Step 3**: Verify greedy selection converges (error decreases monotonically with more sensors)
+   - **Step 4**: Verify that the optimal set outperforms a random set of the same size
+
+### Acceptance Gate
+
+| ID | Type | Criterion | Verification |
+|----|------|-----------|--------------|
+| 8c.1 | `[AUTO]` | Fisher information matrix is valid | `tests/test_sensor_placement.py::test_fisher_information_valid` — Assert F is symmetric, positive semi-definite (all eigenvalues ≥ 0), shape (28, 28), no NaN/Inf |
+| 8c.2 | `[AUTO]` | Leave-one-out produces non-uniform ranking | `tests/test_sensor_placement.py::test_leave_one_out_ranking` — Run leave-one-out. Assert max(degradation) > 2 * min(degradation) — i.e., sensors are not all equally important |
+| 8c.3 | `[AUTO]` | Greedy selection error decreases monotonically | `tests/test_sensor_placement.py::test_greedy_selection_monotonic` — Run greedy forward selection for first 20 sensors. Assert reconstruction error at step k+1 ≤ error at step k |
+| 8c.4 | `[AUTO]` | Optimal set outperforms random set | `tests/test_sensor_placement.py::test_optimal_vs_random` — Select top 30 sensors by greedy. Select 30 random sensors (5 random draws). Assert mean error of optimal < mean error of all random draws |
+| 8c.5 | `[AUTO]` | Sensor type complementarity | `tests/test_sensor_placement.py::test_sensor_type_complementarity` — Reconstruct with flux loops only, Mirnov only, and both. Assert error(both) < error(flux_only) and error(both) < error(mirnov_only) |
+| 8c.6 | `[AUTO]` | Minimum viable set is identified | `tests/test_sensor_placement.py::test_minimum_viable_set` — Assert greedy selection finds a set of ≤ 80 sensors (≤ 62% of total) with Ip error < 5% and boundary error < 2 cm |
+| 8c.7 | `[SCRIPT]` | Sensor placement notebook runs | `jupyter nbconvert --to notebook --execute notebooks/sensor_placement.ipynb --ExecutePreprocessor.timeout=600 --output /dev/null` exits 0 |
+| 8c.8 | `[HUMAN]` | Recommendations are actionable | Does the sensor placement report identify specific (R, Z) locations where sensors should be added or could be removed? Could a hardware engineer use this to make placement decisions? |
+
+---
+
+## Phase 9: Integration, Documentation Update & v0.2.0 Release
+
+**Depends on:** Phase 8a + Phase 8b + Phase 8c
+**Goal:** Integrate all three Phase 8 advances into a cohesive pipeline, update documentation, and tag v0.2.0.
+**One-shot scope:** ~3-4 hours
+
+### Do this
+
+1. **Integration**: Wire EFIT reconstruction + eddy compensation as the default pipeline:
+   - `cute-reconstruct` uses EFIT method by default
+   - Eddy compensation is applied automatically when VV response data is available
+   - Dashboard shows sensor importance coloring on the equilibrium viewer
+2. **Update documentation**:
+   - Update `README.md` with new capabilities
+   - Update `docs/architecture.md` with Green's function and eddy current data flow
+   - Write `docs/eddy_currents.md` explaining the VV compensation approach
+   - Update `docs/operator_guide.md` with new CLI options and sensor placement workflow
+3. **Write summary report**: `notebooks/advanced_reconstruction.ipynb`:
+   - Side-by-side comparison: constraint-based vs. EFIT reconstruction
+   - Eddy current compensation before/after plots
+   - Sensor placement recommendations with figures
+4. **Tag `v0.2.0`** release
+
+### Acceptance Gate
+
+| ID | Type | Criterion | Verification |
+|----|------|-----------|--------------|
+| 9.1 | `[AUTO]` | Full pipeline integration test | `tests/test_integration.py::test_efit_eddy_pipeline` — Generate synthetic ramp-up with eddy currents → compensate → EFIT reconstruct → assert Ip error < 5% and chi² < 0.01 |
+| 9.2 | `[AUTO]` | All prior tests still pass | `tests/test_integration.py::test_regression` — Run full test suite, assert 0 failures (no regressions from Phase 8 changes) |
+| 9.3 | `[SCRIPT]` | Updated README documents new features | `grep -q "Green" README.md && grep -q "eddy" README.md && grep -q "sensor placement" README.md` — all exit 0 |
+| 9.4 | `[SCRIPT]` | Eddy current docs exist | `test -f docs/eddy_currents.md && grep -q "vacuum vessel" docs/eddy_currents.md && grep -q "time constant" docs/eddy_currents.md` exits 0 |
+| 9.5 | `[SCRIPT]` | Advanced reconstruction notebook runs | `jupyter nbconvert --to notebook --execute notebooks/advanced_reconstruction.ipynb --ExecutePreprocessor.timeout=600 --output /dev/null` exits 0 |
+| 9.6 | `[SCRIPT]` | v0.2.0 tag exists | `git tag --list 'v0.2.0'` returns `v0.2.0` |
+| 9.7 | `[HUMAN]` | Side-by-side comparison is convincing | Open `notebooks/advanced_reconstruction.ipynb`. Does the EFIT reconstruction produce visually similar results to the constraint-based reconstruction? Does eddy compensation visibly improve the ramp-up reconstruction? |
+
+---
+
 ## Acceptance Summary
 
 Quick reference: total criteria per phase and how many are automated.
@@ -492,9 +726,13 @@ Quick reference: total criteria per phase and how many are automated.
 | 6a. Dashboard | 9 | 5 | 2 | 2 (* 6a.9 counts as 1) |
 | 6b. Validation | 9 | 6 | 2 | 1 |
 | 7. Documentation | 9 | 0 | 8 | 1 |
-| **Total** | **86** | **43** | **33** | **8** (* 2 need external person) |
+| 8a. Green's/EFIT | 13 | 11 | 1 | 1 |
+| 8b. Eddy Currents | 8 | 7 | 0 | 1 |
+| 8c. Sensor Placement | 8 | 6 | 1 | 1 |
+| 9. Integration & v0.2 | 7 | 2 | 4 | 1 |
+| **Total** | **122** | **69** | **39** | **12** (* 2 need external person) |
 
-**50% of all criteria are fully automated pytest tests. 88% require no human judgment.**
+**57% of all criteria are fully automated pytest tests. 90% require no human judgment.**
 
 ---
 
@@ -511,6 +749,11 @@ tests/
 ├── test_reconstruct.py     # Phase 5 acceptance tests
 ├── test_dashboard.py       # Phase 6a acceptance tests
 ├── test_validation.py      # Phase 6b acceptance tests
+├── test_greens.py          # Phase 8a Green's function tests
+├── test_efit.py            # Phase 8a EFIT reconstruction tests
+├── test_eddy.py            # Phase 8b eddy current tests
+├── test_sensor_placement.py# Phase 8c sensor placement tests
+├── test_integration.py     # Phase 9 integration tests
 └── conftest.py             # Shared fixtures (reference equilibrium, sensor config, etc.)
 ```
 
@@ -563,6 +806,10 @@ echo "Passed: $PASS  Failed: $FAIL"
 | No real experimental data during project | Can't validate against experiment | Synthetic data pipeline (Phase 3a) is the fallback; design for easy swap-in |
 | Reconstruction doesn't converge | Core deliverable at risk | Start with simple current profiles; add complexity incrementally |
 | OFT build breaks on macOS | Blocks everything | Use pre-built binaries; pin to a known-good release tag |
+| Green's function matrix is ill-conditioned | EFIT reconstruction unstable | Tikhonov regularization with L-curve λ selection; truncated SVD as fallback |
+| Vacuum solve with Ip=0 fails in TokaMaker | Blocks Phase 8a | Use very small Ip (1A) instead of exactly 0; verify Green's linearity holds |
+| VV eddy current time constants are shorter than measurement cadence | Compensation is meaningless | Check time constants against sample rate; if τ < dt, eddy contribution is negligible anyway |
+| Sensor placement optimization is geometry-dependent | Results change if mesh/VV shape changes | Document assumptions clearly; provide scripts to re-run analysis with updated geometry |
 
 ## Time Estimate (rough)
 
@@ -578,4 +825,8 @@ echo "Passed: $PASS  Failed: $FAIL"
 | 6a. Dashboard | ~4-5 hrs |
 | 6b. Validation | ~3-4 hrs |
 | 7. Docs & Handoff | ~2-3 hrs |
-| **Total** | **~30-38 hrs** |
+| 8a. Green's/EFIT | ~6-8 hrs |
+| 8b. Eddy Currents | ~4-5 hrs |
+| 8c. Sensor Placement | ~4-5 hrs |
+| 9. Integration & v0.2 | ~3-4 hrs |
+| **Total** | **~47-58 hrs** |
