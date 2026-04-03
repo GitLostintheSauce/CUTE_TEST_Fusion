@@ -82,11 +82,15 @@
 ### `src/reconstruct/` — Equilibrium Reconstruction
 - **constraints.py**: Converts sensor measurements to/from ordered numpy vectors, estimates Ip from Mirnov data
 - **solver.py**: Iterative reconstruction loop — sets TokaMaker constraints from measurements, solves, checks residual, optionally refines with Jacobian-based coil current adjustment
+- **greens.py**: Green's function matrix computation (130×28) relating coil currents to sensor measurements. Uses baseline subtraction to isolate per-coil contributions. Supports HDF5 save/load for caching.
+- **efit.py**: EFIT-style reconstruction using Green's functions. Decomposes `y_meas = G @ I_coils + y_plasma`, iterates between Tikhonov-regularized coil current fitting and GS plasma solve. SVD-based regularization selection targets condition number < 5×10⁵.
+- **eddy.py**: Vacuum vessel eddy current modeling and compensation. Fits multi-exponential decay from TD step-response simulation. Recursive exponential filter for O(n) real-time compensation.
 - **timeseries.py**: Loops over time slices with warm-starting (preserves psi between slices)
 - **cli.py**: `cute-reconstruct` command-line entry point
 
 ### `src/validation/` — Benchmarks
 - **benchmarks.py**: Noise sweep (SNR parameterized), sensor dropout, convergence analysis utilities
+- **sensor_placement.py**: Fisher information analysis, leave-one-out importance ranking, greedy forward sensor selection, sensor type complementarity analysis, minimum viable set identification
 
 ### `src/dashboard/` — Web Interface
 - **app.py**: Plotly Dash application with shot browser, signal viewer, equilibrium contour plot, parameter timeline, sim-vs-experiment comparison, and token-based auth gate
@@ -107,3 +111,12 @@ The synthetic data pipeline (forward model + noise) serves as the primary valida
 
 ### 5. Constraint-Based Reconstruction
 Rather than directly optimizing coil currents, the reconstruction leverages TokaMaker's built-in constraint solver (isoflux + saddle points + Ip target). This is both faster and more robust than external optimization, as TokaMaker handles the nonlinear GS equation internally.
+
+### 6. Green's Function EFIT Reconstruction (v0.2.0)
+The EFIT method decomposes measured fields into vacuum (coil) and plasma contributions using a pre-computed Green's function matrix. This allows explicit coil current fitting via Tikhonov-regularized least-squares, followed by a GS plasma solve. The iterative approach converges in <30 iterations for clean data.
+
+### 7. Eddy Current Compensation (v0.2.0)
+The vacuum vessel eddy current response is modeled as a sum of 3 exponential eigenmodes calibrated via TD step simulation. A recursive exponential filter subtracts the eddy contribution from measurements before reconstruction, improving accuracy during transient phases.
+
+### 8. Vacuum Solver State Management
+TokaMaker's vacuum solver state is corrupted by `eig_wall()` and non-vacuum solves. The pipeline manages this by: (a) performing all vacuum-dependent computations (Green's matrix, eddy calibration) before state-corrupting operations, and (b) calling `vac_solve()` to reset the vacuum solver before subsequent equilibrium solves.

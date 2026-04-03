@@ -83,6 +83,75 @@ Set the `CUTE_DASH_TOKEN` environment variable or pass `--token` to enable token
 python -m src.dashboard.app --token mysecrettoken --port 8050
 ```
 
+## EFIT Reconstruction (Green's function method)
+
+The EFIT method provides an alternative to constraint-based reconstruction by explicitly decomposing measurements into coil and plasma contributions.
+
+### Pre-compute the Green's function matrix
+
+```python
+from src.forward.sensors import generate_cute_sensors
+from src.reconstruct.greens import compute_greens_matrix, save_greens_matrix
+
+sensor_config = generate_cute_sensors()
+G, coil_names = compute_greens_matrix(mygs, sensor_config)
+save_greens_matrix("data/greens_matrix.h5", G, coil_names)
+```
+
+### Run EFIT reconstruction
+
+```python
+from src.reconstruct.greens import load_greens_matrix
+from src.reconstruct.efit import efit_reconstruct
+
+G, coil_names = load_greens_matrix("data/greens_matrix.h5")
+result = efit_reconstruct(mygs, measurements, sensor_config, G, coil_names)
+print(f"Ip = {result.equilibrium.plasma_current:.0f} A")
+print(f"Chi² = {result.diagnostics.chi_squared:.2e}")
+```
+
+## Eddy Current Compensation
+
+During current ramps, vacuum vessel eddy currents bias the measurements. See [docs/eddy_currents.md](eddy_currents.md) for the full theory.
+
+### One-time calibration
+
+```python
+from src.reconstruct.eddy import compute_vessel_response, save_vessel_response
+
+vr = compute_vessel_response(mygs, sensor_config, step_coil="CS01", step_amplitude=100.0)
+save_vessel_response("data/vessel_response.h5", vr)
+```
+
+### Apply compensation before reconstruction
+
+```python
+from src.reconstruct.eddy import load_vessel_response, compensate_eddy_fast
+
+vr = load_vessel_response("data/vessel_response.h5")
+compensated = compensate_eddy_fast(measurements, times, coil_currents, vr)
+```
+
+## Sensor Placement Analysis
+
+Evaluate which sensors contribute most to reconstruction accuracy:
+
+```python
+from src.validation.sensor_placement import leave_one_out, find_minimum_viable_set
+from src.reconstruct.constraints import sensor_ids_ordered
+
+sensor_ids = sensor_ids_ordered(sensor_config)
+
+# Which sensor matters most?
+degradation = leave_one_out(G, sensor_ids)
+for sid, deg in sorted(degradation.items(), key=lambda x: -x[1])[:10]:
+    print(f"{sid}: degradation = {deg:.2e}")
+
+# What's the minimum viable set?
+viable_ids, n_viable = find_minimum_viable_set(G, sensor_ids, coil_names)
+print(f"Minimum viable set: {n_viable} sensors")
+```
+
 ## Adding a new sensor type
 
 ### 1. Define the sensor geometry

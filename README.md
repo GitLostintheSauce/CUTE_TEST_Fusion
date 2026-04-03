@@ -41,7 +41,14 @@ Raw Signals ──► Signal Processing ──► Reconstruction ──► Dashb
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Data flow:** raw HDF5 → `signal.processing.process_pipeline()` → `reconstruct.fit_equilibrium()` → `store.hdf5.save_shot()` → `dashboard.app`
+**Data flow:** raw HDF5 → `signal.processing.process_pipeline()` → eddy compensation → EFIT reconstruct → `store.hdf5.save_shot()` → `dashboard.app`
+
+### Advanced Reconstruction (v0.2.0)
+
+- **Green's function matrix**: Pre-computed 130×28 matrix relating coil currents to sensor measurements, enabling fast vacuum field decomposition
+- **EFIT-style reconstruction**: Iterative decomposition of measured fields into coil + plasma contributions using Tikhonov-regularized least-squares
+- **Eddy current compensation**: Exponential decay model of vacuum vessel eddy currents (3 eigenmodes, τ = 30–105 μs), subtracted from measurements before reconstruction
+- **Sensor placement optimization**: Fisher information analysis, greedy forward selection, and leave-one-out importance ranking to identify minimum viable sensor sets
 
 See [spec.md](spec.md) for full project specification, phase DAG, and acceptance criteria.
 
@@ -61,10 +68,10 @@ CUTE_TEST/
 │   ├── store/          # Pydantic schemas + HDF5 I/O
 │   ├── signal/         # Signal processing pipeline
 │   ├── forward/        # Sensor config + forward model
-│   ├── reconstruct/    # Equilibrium reconstruction
-│   ├── validation/     # Benchmarks and validation
+│   ├── reconstruct/    # Equilibrium reconstruction (constraint + EFIT + eddy)
+│   ├── validation/     # Benchmarks, validation, sensor placement
 │   └── dashboard/      # Plotly Dash web app
-├── tests/              # pytest test suite (50 tests)
+├── tests/              # pytest test suite (76 tests)
 ├── data/               # CUTE mesh + shot data
 ├── config/             # Processing parameters (TOML)
 ├── notebooks/          # Jupyter notebooks

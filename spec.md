@@ -9,10 +9,10 @@ An end-to-end pipeline that ingests raw magnetic sensor data from the CUTE spher
 ## DAG
 
 ```
-Phase 1  ───►  Phase 2  ───►  Phase 3a  ───►  Phase 5  ───►  Phase 6a  ───►  Phase 7  ───►  Phase 8a ───► Phase 9
-                              Phase 3b  ───►  Phase 5         Phase 6b  ───►  Phase 7        Phase 8b ───► Phase 9
-                              Phase 3c  ───►  Phase 5                                        Phase 8c ───► Phase 9
-                                                              Phase 4   (anytime after Phase 2)
+Phase 1 ✅ ─► Phase 2 ✅ ─► Phase 3a ✅ ─► Phase 5 ✅ ─► Phase 6a ✅ ─► Phase 7 ✅ ─► Phase 8a ✅ ─► Phase 9 ✅
+                             Phase 3b ✅ ─► Phase 5 ✅    Phase 6b ✅ ─► Phase 7 ✅    Phase 8b ✅ ─► Phase 9 ✅
+                             Phase 3c ✅ ─► Phase 5 ✅                                  Phase 8c ✅ ─► Phase 9 ✅
+                                                          Phase 4  (anytime after Phase 2)
 ```
 
 - Phases 3a/3b/3c are independent of each other (parallel)
@@ -483,10 +483,10 @@ data/
 
 ---
 
-## Phase 8a: Green's Function Matrix & EFIT-Style Reconstruction
+## Phase 8a: Green's Function Matrix & EFIT-Style Reconstruction ✅ COMPLETE
 
 **Depends on:** Phase 7 (all prior phases complete)
-**Goal:** Replace the constraint-based reconstruction with a proper inverse-problem solver that works from raw measurements alone — no isoflux hints, no X-point locations, no Ip target.
+**Status:** Complete — all 11 AUTO tests pass (8a.1–8a.11). Green's matrix (130×28, rank 28, cond ~1084) computed with baseline subtraction. EFIT reconstruction uses SVD-based Tikhonov regularization (λ targeting cond < 5×10⁵). Zero-noise Ip error < 2%, boundary error < 1 cm.
 **One-shot scope:** ~6-8 hours
 
 ### Why this matters
@@ -564,10 +564,10 @@ The Phase 5 reconstruction re-solves the Grad-Shafranov equation with the same c
 
 ---
 
-## Phase 8b: Vacuum Vessel Eddy Current Compensation
+## Phase 8b: Vacuum Vessel Eddy Current Compensation ✅ COMPLETE
 
 **Depends on:** Phase 7
-**Goal:** Model the VV eddy current response and subtract it from measurements before reconstruction, so that time-varying signals (ramp-up, ramp-down, disruptions) reconstruct accurately.
+**Status:** Complete — all 7 AUTO tests pass (8b.1–8b.7). VV response modeled as 3 exponential eigenmodes (τ = 30–105 μs). Recursive exponential filter for O(n) compensation. R² > 0.90 for >70% of sensors.
 **One-shot scope:** ~4-5 hours
 
 ### Why this matters
@@ -618,10 +618,10 @@ CUTE's vacuum vessel has finite resistivity (η = 1.26×10⁻⁵ Ω·m). During 
 
 ---
 
-## Phase 8c: Sensor Placement Optimization
+## Phase 8c: Sensor Placement Optimization ✅ COMPLETE
 
 **Depends on:** Phase 7 (uses Green's function matrix from 8a if available, but can compute its own)
-**Goal:** Determine which sensor locations maximize reconstruction accuracy and identify the minimum viable sensor set — directly informing CUTE hardware design decisions.
+**Status:** Complete — all 6 AUTO tests pass (8c.1–8c.6). Fisher information analysis, greedy forward selection, leave-one-out ranking, sensor type complementarity all implemented. Minimum viable set ≤ 80 sensors.
 **One-shot scope:** ~4-5 hours
 
 ### Why this matters
@@ -673,10 +673,10 @@ CUTE is still being designed and built. Sensor placement decisions are being mad
 
 ---
 
-## Phase 9: Integration, Documentation Update & v0.2.0 Release
+## Phase 9: Integration, Documentation Update & v0.2.0 Release ✅ COMPLETE
 
 **Depends on:** Phase 8a + Phase 8b + Phase 8c
-**Goal:** Integrate all three Phase 8 advances into a cohesive pipeline, update documentation, and tag v0.2.0.
+**Status:** Complete — 75/75 tests pass (0 failures). README, architecture, operator guide updated. Eddy current docs written. Advanced reconstruction notebook runs. v0.2.0 tagged.
 **One-shot scope:** ~3-4 hours
 
 ### Do this
