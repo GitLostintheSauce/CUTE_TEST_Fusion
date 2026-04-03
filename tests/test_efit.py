@@ -2,7 +2,6 @@
 import numpy as np
 import pytest
 
-from src.forward.sensors import generate_cute_sensors
 from src.validation.benchmarks import noise_sweep
 
 oft_available = True

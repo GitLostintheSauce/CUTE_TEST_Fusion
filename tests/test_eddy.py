@@ -5,8 +5,6 @@ import tempfile
 import numpy as np
 import pytest
 
-from src.forward.sensors import generate_cute_sensors
-
 oft_available = True
 try:
     import OpenFUSIONToolkit  # noqa: F401
@@ -116,7 +114,6 @@ def test_eddy_compensation_improves_ramp(td_data, eddy_state):
     # y_ideal[t] = 0 for all t (the eddy contribution should be zero)
     # y_with_eddy[t] = eddy[t] (the measured eddy transient)
     y_with_eddy = eddy.copy()
-    y_ideal = np.zeros_like(eddy)
 
     # Coil currents: step from 0 to step_amplitude at t=0
     coil_currents = np.ones((n_times, n_coils)) * 0.0

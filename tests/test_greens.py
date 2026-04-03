@@ -5,8 +5,6 @@ import tempfile
 import numpy as np
 import pytest
 
-from src.forward.sensors import generate_cute_sensors
-
 oft_available = True
 try:
     import OpenFUSIONToolkit  # noqa: F401
@@ -47,7 +45,8 @@ def test_greens_vacuum_consistency(greens_state, vacuum_consistency_data):
     y_predicted = G @ I_vec
 
     # They should match within 0.1% (Green's matrix is linear, vacuum is linear)
-    rel_err = np.linalg.norm(y_coil_actual - y_predicted) / max(np.linalg.norm(y_coil_actual), 1e-10)
+    norm_actual = max(np.linalg.norm(y_coil_actual), 1e-10)
+    rel_err = np.linalg.norm(y_coil_actual - y_predicted) / norm_actual
     assert rel_err < 0.001, f"Vacuum consistency error: {rel_err:.4f} > 0.1%"
 
     # Non-trivial values

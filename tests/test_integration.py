@@ -21,7 +21,6 @@ def test_efit_eddy_pipeline(tokamaker_session, greens_session, eddy_session):
     eddy current transients, compensates the eddy contribution, then runs
     EFIT reconstruction on the compensated measurements.
     """
-    from src.forward.sensors import generate_cute_sensors
     from src.reconstruct.eddy import compensate_eddy_fast
     from src.reconstruct.efit import efit_reconstruct
     from tests.conftest import _solve_reference
@@ -45,7 +44,6 @@ def test_efit_eddy_pipeline(tokamaker_session, greens_session, eddy_session):
     #    Simulate a ramp: coil currents go from 0 to final values over n_times steps
     n_times = 20
     n_sensors = sensor_config.n_total
-    n_coils = len(coil_names)
 
     # Get final coil currents from the reference solve
     coil_currents_ref = mygs.get_coil_currents()[0]

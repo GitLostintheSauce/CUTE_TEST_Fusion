@@ -14,7 +14,7 @@ matrices (per sensor) for each mode.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import h5py
@@ -171,7 +171,10 @@ def compensate_eddy(
 
     # Compute dI/dt from coil currents (finite difference)
     dt_arr = np.diff(times, prepend=times[0] - (times[1] - times[0]))
-    dI_dt = np.diff(coil_currents_timeseries, axis=0, prepend=coil_currents_timeseries[:1]) / dt_arr[:, np.newaxis]
+    dI_dt = (
+        np.diff(coil_currents_timeseries, axis=0, prepend=coil_currents_timeseries[:1])
+        / dt_arr[:, np.newaxis]
+    )
 
     # Sum over all coils (simplified: use total dI/dt as proxy)
     # For a more accurate model, we'd need per-coil response matrices.
@@ -181,7 +184,6 @@ def compensate_eddy(
     # Compute eddy contribution via discrete convolution
     y_eddy = np.zeros((n_times, n_sensors))
     for t_idx in range(1, n_times):
-        dt_step = times[t_idx] - times[t_idx - 1]
         for k in range(len(tau)):
             # Contribution from each past time step, decayed
             for t_past in range(t_idx):

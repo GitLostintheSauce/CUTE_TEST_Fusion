@@ -2,8 +2,6 @@
 import numpy as np
 import pytest
 
-from src.forward.sensors import generate_cute_sensors
-
 oft_available = True
 try:
     import OpenFUSIONToolkit  # noqa: F401
