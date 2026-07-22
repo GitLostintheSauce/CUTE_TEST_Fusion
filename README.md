@@ -90,4 +90,3 @@ CUTE_TEST/
 
 ## License
 
-This project is part of the CUTE tokamak educational program at Columbia University.
