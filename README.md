@@ -88,5 +88,4 @@ CUTE_TEST/
 - **Plotly Dash** — Interactive dashboard
 - **pytest** — Test framework
 
-## License
 
