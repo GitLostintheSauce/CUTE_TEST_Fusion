@@ -1,0 +1,11 @@
+# Render.com blueprint: one-click deploy of the CUTE dashboard.
+# In Render, choose "New +" -> "Blueprint" and point it at this repo; Render
+# reads this file, builds the Dockerfile, and gives you a public URL.
+services:
+  - type: web
+    name: cute-dashboard
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    autoDeploy: true

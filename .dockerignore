@@ -1,0 +1,15 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.claude
+*.egg-info
+notebooks
+tests
+data/synthetic/*.h5
+data/raw/*.h5
+data/processed/*.h5

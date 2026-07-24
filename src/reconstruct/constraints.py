@@ -67,4 +67,4 @@ def estimate_ip_from_mirnov(
     R_avg = 0.48  # outboard probe radius
     # Ampere's law: B_z ~ mu0 * Ip / (2*pi*R) for a simple current loop
     ip_est = abs(avg_bz) * 2.0 * np.pi * R_avg / mu0
-    return ip_est
+    return float(ip_est)

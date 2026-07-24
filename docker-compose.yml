@@ -1,0 +1,13 @@
+# Run the CUTE dashboard locally with one command:
+#     docker compose up
+# then open http://localhost:8050
+services:
+  dashboard:
+    build: .
+    ports:
+      - "8050:8050"
+    environment:
+      # Set CUTE_DASH_TOKEN to require an access token; leave unset for an
+      # open demo.
+      - PORT=8050
+    restart: unless-stopped

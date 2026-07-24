@@ -1,11 +1,12 @@
 """Generate a synthetic shot HDF5 file with realistic data for dashboard viewing."""
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-import numpy as np
 from datetime import datetime
+
+import numpy as np
 
 from src.forward.sensors import generate_cute_sensors
 from src.store.hdf5 import SignalData, save_shot
