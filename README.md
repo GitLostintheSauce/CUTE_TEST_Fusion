@@ -195,10 +195,7 @@ CUTE_TEST/
 - **Plotly Dash**: Interactive dashboard
 - **pytest**: Test framework
 
+
 ## License
 
 Released under the [MIT License](LICENSE).
-
-This project was developed in the context of the CUTE tokamak educational
-program at Columbia University. If you intend to reuse it in an official
-Columbia or CUTE capacity, check with the program first.
