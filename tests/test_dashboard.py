@@ -109,17 +109,17 @@ def test_parameter_timeline_callback(synthetic_shots):
 
 
 def test_sim_vs_experiment_callback(synthetic_shots):
-    """[6a.6] Sim vs experiment returns Figure with 3 traces."""
+    """[6a.6] Measured-vs-baseline returns Figure with 3 traces."""
     _, paths = synthetic_shots
     fig = get_sim_vs_experiment_figure(str(paths[0]), "FL_IB01")
     assert isinstance(fig, go.Figure)
     assert len(fig.data) == 3, (
-        f"Expected 3 traces (measured, synthetic, residual), got {len(fig.data)}"
+        f"Expected 3 traces (measured, baseline, residual), got {len(fig.data)}"
     )
 
     names = [t.name for t in fig.data]
     assert "Measured" in names
-    assert "Synthetic" in names
+    assert "Baseline (mean)" in names
     assert "Residual" in names
 
 
@@ -129,7 +129,7 @@ def test_auth_gate():
     app = create_app(token="secret123")
     client = app.server.test_client()
 
-    # The app serves the layout (SPA) — auth is client-side via Dash callbacks.
+    # The app serves the layout (SPA); auth is client-side via Dash callbacks.
     # Verify the app starts and serves the page.
     resp = client.get("/")
     assert resp.status_code == 200
@@ -138,6 +138,6 @@ def test_auth_gate():
     from src.dashboard import app as app_module
     assert app_module.AUTH_TOKEN == "secret123"
 
-    # App without token — no auth required
+    # App without token: no auth required
     create_app(token="")
     assert app_module.AUTH_TOKEN == ""

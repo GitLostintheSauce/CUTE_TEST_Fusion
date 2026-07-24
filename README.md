@@ -52,6 +52,46 @@ Raw Signals ──► Signal Processing ──► Reconstruction ──► Dashb
 
 See [spec.md](spec.md) for full project specification, phase DAG, and acceptance criteria.
 
+### ML Surrogate Reconstruction (v0.3.0)
+
+A neural-network surrogate that maps the 130 magnetic diagnostic signals
+directly to plasma parameters (plasma current, major radius, vertical
+position, minor radius), as a fast alternative to iterative reconstruction.
+
+- **From-scratch NumPy MLP** (`src/ml/mlp.py`): forward pass, backprop, Adam,
+  and standardization implemented without a deep-learning framework, so the
+  feature adds zero heavy dependencies and stays fully reproducible.
+- **Physics-grounded training data** (`src/ml/physics.py`, `dataset.py`): a
+  reduced forward model built from analytic circular-loop Green's functions
+  (elliptic integrals), validated to machine precision against a direct
+  Biot-Savart quadrature and the exact on-axis field.
+- **Honest benchmark** (`src/ml/baseline.py`): the surrogate is compared
+  against a classical nonlinear least-squares inversion of the *same* physics.
+
+Results on a held-out set (`models/surrogate_metrics.json`):
+
+| Metric | Value |
+|--------|-------|
+| R² (overall) | 0.99 |
+| Plasma current MAE | ~1.8 kA (on a 20-250 kA range) |
+| Position accuracy (R0, Z0) | ~1 mm |
+| Inference speed | ~1 µs/shot |
+| Speedup vs. iterative baseline | ~13,000× |
+
+The iterative baseline is slightly more accurate; the surrogate trades a small
+accuracy cost for a large speed gain, which is the tradeoff that makes
+real-time reconstruction feasible. Train it with:
+
+```bash
+python scripts/train_surrogate.py --samples 8000 --epochs 400
+```
+
+![Surrogate vs. iterative benchmark](docs/surrogate_benchmark.png)
+
+The dashboard's **ML Surrogate Reconstruction (live)** panel samples a plasma,
+adds measurement noise, and reconstructs it on click, showing predicted vs.
+true parameters and the inference latency.
+
 ## Architecture Details
 
 See [docs/architecture.md](docs/architecture.md) for module responsibilities, design decisions, and data flow diagrams.
