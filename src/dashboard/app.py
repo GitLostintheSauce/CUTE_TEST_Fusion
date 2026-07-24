@@ -125,6 +125,18 @@ def _style_figure(fig: go.Figure, title: str, xaxis_title: str = "",
     return fig
 
 
+def _whatif_slider(param: str, label: str, lo: float, hi: float,
+                   step: float, value: float) -> html.Div:
+    """One labeled slider row for the what-if explorer."""
+    marks = {lo: str(lo), hi: str(hi)}
+    return html.Div(className="whatif-slider-row", children=[
+        html.Label(label, htmlFor=f"whatif-{param}"),
+        dcc.Slider(id=f"whatif-{param}", min=lo, max=hi, step=step,
+                   value=value, marks=marks,
+                   tooltip={"placement": "bottom", "always_visible": True}),
+    ])
+
+
 def _card(title: str, help_text: str, *children, extra_class: str = "") -> html.Div:
     return html.Div(
         className=f"card {extra_class}".strip(),
@@ -276,6 +288,33 @@ def create_app(data_dir: str | Path | None = None, token: str | None = None) -> 
                 dcc.Graph(id="surrogate-graph", config=graph_config,
                           style={"height": "360px", "flex": "1"}),
             ]),
+            extra_class="surrogate-card",
+        ),
+        _card(
+            "What-if Explorer (live surrogate)",
+            "Set a plasma state by hand and watch the reconstruction respond. "
+            "The sliders define the true plasma; the reduced forward model "
+            "computes the 130 sensor signals that state would produce, and "
+            "the surrogate reconstructs the parameters from those signals "
+            "alone. Signals here are noise-free, so this isolates the "
+            "surrogate's model error from measurement error.",
+            html.Div(className="whatif-sliders", children=[
+                _whatif_slider("Ip", "Plasma current Ip (kA)",
+                               20, 250, 5, 150),
+                _whatif_slider("R0", "Major radius R0 (m)",
+                               0.28, 0.36, 0.005, 0.32),
+                _whatif_slider("Z0", "Vertical position Z0 (m)",
+                               -0.06, 0.06, 0.005, 0.0),
+                _whatif_slider("a", "Minor radius a (m)",
+                               0.05, 0.18, 0.005, 0.10),
+            ]),
+            html.Div(className="surrogate-body", children=[
+                html.Div(id="whatif-table", className="surrogate-table"),
+                dcc.Graph(id="whatif-graph", config=graph_config,
+                          style={"height": "360px", "flex": "1"}),
+            ]),
+            dcc.Graph(id="whatif-signals-graph", config=graph_config,
+                      style={"height": "260px"}),
             extra_class="surrogate-card",
         ),
         html.Div(className="plot-grid", children=[
@@ -508,6 +547,18 @@ def _register_callbacks(app: Dash):
     )
     def run_surrogate(n_clicks):
         return get_surrogate_demo(seed=n_clicks)
+
+    @app.callback(
+        Output("whatif-table", "children"),
+        Output("whatif-graph", "figure"),
+        Output("whatif-signals-graph", "figure"),
+        Input("whatif-Ip", "value"),
+        Input("whatif-R0", "value"),
+        Input("whatif-Z0", "value"),
+        Input("whatif-a", "value"),
+    )
+    def run_whatif(ip_ka, r0, z0, a):
+        return get_whatif_demo(ip_ka, r0, z0, a)
 
 
 # ---------------------------------------------------------------------------
@@ -761,7 +812,7 @@ def get_surrogate_demo(seed: int = 0):
         )
         return msg, empty_fig, ""
 
-    from src.ml.dataset import PARAM_NAMES, PARAM_UNITS, generate_dataset
+    from src.ml.dataset import generate_dataset
 
     # Sample one plasma (with noise) from the reduced forward model.
     X, y_true, _ = generate_dataset(n_samples=1, noise_frac=0.02,
@@ -784,7 +835,30 @@ def get_surrogate_demo(seed: int = 0):
         y_pred = model.predict(X)[0]
         latency_us = (time.perf_counter() - t0) * 1e6
 
-    # Comparison table.
+    table = _surrogate_table(y_true, y_pred, y_sigma)
+
+    # Shape comparison plot: true vs. reconstructed boundary.
+    fig = go.Figure()
+    tr_r, tr_z = _boundary_ellipse(y_true[1], y_true[2], y_true[3])
+    pr_r, pr_z = _boundary_ellipse(y_pred[1], y_pred[2], y_pred[3])
+    fig.add_trace(go.Scatter(x=tr_r, y=tr_z, mode="lines", name="True plasma",
+                             line=dict(color=COLORS["gray"], width=3)))
+    fig.add_trace(go.Scatter(x=pr_r, y=pr_z, mode="lines",
+                             name="Surrogate reconstruction",
+                             line=dict(color=COLORS["vermillion"], width=2,
+                                       dash="dash")))
+    _style_figure(fig, "True vs. reconstructed plasma shape", "R (m)", "Z (m)")
+    fig.update_layout(yaxis_scaleanchor="x", yaxis_scaleratio=1)
+
+    latency = f"Inference: {latency_us:.0f} us/shot"
+    return table, fig, latency
+
+
+def _surrogate_table(y_true, y_pred, y_sigma=None) -> html.Table:
+    """Build the true/predicted/error comparison table shared by the
+    surrogate and what-if panels."""
+    from src.ml.dataset import PARAM_NAMES, PARAM_UNITS
+
     def _fmt(name, val):
         return f"{val:,.0f}" if name == "Ip" else f"{val:.4f}"
 
@@ -812,23 +886,78 @@ def get_surrogate_demo(seed: int = 0):
             if outside else None,
         ))
         rows.append(html.Tr(cells))
-    table = html.Table(rows)
+    return html.Table(rows)
 
-    # Shape comparison plot: true vs. reconstructed boundary.
+
+def get_whatif_demo(ip_ka: float, r0: float, z0: float, a: float):
+    """Run the what-if explorer: sliders -> forward model -> surrogate.
+
+    The slider values define the true plasma. The reduced forward model
+    computes the noise-free sensor signals for that state, and the surrogate
+    reconstructs the parameters from those signals alone.
+
+    Returns (table_children, boundary_figure, signals_figure).
+    """
+    model, layout = _load_surrogate()
+    empty_fig = _style_figure(go.Figure(), "")
+
+    if model is None or layout is None:
+        msg = html.Div(
+            "No trained surrogate found. Run "
+            "'python scripts/train_surrogate.py' to create "
+            "models/surrogate.npz, then reload.",
+            className="about-note",
+        )
+        return msg, empty_fig, empty_fig
+
+    from src.ml.dataset import forward_signals
+
+    y_true = np.array([float(ip_ka) * 1e3, float(r0), float(z0), float(a)])
+    X = forward_signals(y_true[0], y_true[1], y_true[2], y_true[3],
+                        layout)[None, :]
+
+    # Same estimator policy as the surrogate panel: prediction and error bar
+    # must come from the same model, ensemble preferred.
+    ensemble, scales = _load_ensemble()
+    y_sigma = None
+    if ensemble is not None:
+        mean, sd = ensemble.predict_with_std(X)
+        y_pred = mean[0]
+        y_sigma = sd[0] * (scales if scales is not None else 1.0)
+    else:
+        y_pred = model.predict(X)[0]
+
+    table = _surrogate_table(y_true, y_pred, y_sigma)
+
+    # Boundary overlay: the state you set vs. what the surrogate recovered.
     fig = go.Figure()
     tr_r, tr_z = _boundary_ellipse(y_true[1], y_true[2], y_true[3])
     pr_r, pr_z = _boundary_ellipse(y_pred[1], y_pred[2], y_pred[3])
-    fig.add_trace(go.Scatter(x=tr_r, y=tr_z, mode="lines", name="True plasma",
+    fig.add_trace(go.Scatter(x=tr_r, y=tr_z, mode="lines", name="Set plasma",
                              line=dict(color=COLORS["gray"], width=3)))
     fig.add_trace(go.Scatter(x=pr_r, y=pr_z, mode="lines",
                              name="Surrogate reconstruction",
                              line=dict(color=COLORS["vermillion"], width=2,
                                        dash="dash")))
-    _style_figure(fig, "True vs. reconstructed plasma shape", "R (m)", "Z (m)")
+    _style_figure(fig, "Set vs. reconstructed plasma shape", "R (m)", "Z (m)")
     fig.update_layout(yaxis_scaleanchor="x", yaxis_scaleratio=1)
 
-    latency = f"Inference: {latency_us:.0f} us/shot"
-    return table, fig, latency
+    # Sensor response: what the 130 diagnostics would read for this state.
+    n_fl = len(layout.fl_R)
+    sig_fig = go.Figure()
+    sig_fig.add_trace(go.Scatter(
+        x=np.arange(n_fl), y=X[0, :n_fl], mode="lines+markers",
+        name="Flux loops (Wb)", marker=dict(size=4),
+        line=dict(color=COLORS["blue"], width=1.5)))
+    sig_fig.add_trace(go.Scatter(
+        x=np.arange(n_fl, layout.n_sensors), y=X[0, n_fl:],
+        mode="lines+markers", name="Mirnov probes (T)",
+        marker=dict(size=4),
+        line=dict(color=COLORS["green"], width=1.5)))
+    _style_figure(sig_fig,
+                  "Forward-model sensor signals for this state (noise-free)",
+                  "Sensor index", "Signal")
+    return table, fig, sig_fig
 
 
 # ---------------------------------------------------------------------------

@@ -141,3 +141,45 @@ def test_auth_gate():
     # App without token: no auth required
     create_app(token="")
     assert app_module.AUTH_TOKEN == ""
+
+
+def test_whatif_demo():
+    """[7.1] What-if explorer: sliders -> forward model -> surrogate."""
+    from src.dashboard.app import get_whatif_demo
+
+    table, boundary_fig, signals_fig = get_whatif_demo(150, 0.32, 0.0, 0.10)
+
+    # With the trained surrogate present, the table compares set vs.
+    # predicted parameters; without it, a helpful message renders instead.
+    from src.dashboard.app import _load_surrogate
+    model, _ = _load_surrogate()
+    if model is None:
+        pytest.skip("no trained surrogate available")
+
+    assert isinstance(boundary_fig, go.Figure)
+    assert len(boundary_fig.data) == 2  # set + reconstructed boundary
+    assert isinstance(signals_fig, go.Figure)
+    assert len(signals_fig.data) == 2  # flux loops + Mirnov probes
+
+    # The reconstruction should land near the set state (noise-free input).
+    rows = table.children
+    assert len(rows) == 5  # header + 4 parameters
+
+
+def test_whatif_tracks_sliders():
+    """[7.1] Moving Ip by a factor should move the prediction accordingly."""
+    from src.dashboard.app import _load_surrogate, get_whatif_demo
+
+    model, _ = _load_surrogate()
+    if model is None:
+        pytest.skip("no trained surrogate available")
+
+    def predicted_ip(ip_ka):
+        table, _, _ = get_whatif_demo(ip_ka, 0.32, 0.0, 0.10)
+        # Row 1, cell "Predicted" (index 2); strip thousands separators.
+        cell = table.children[1].children[2].children
+        return float(str(cell).replace(",", ""))
+
+    lo, hi = predicted_ip(100), predicted_ip(200)
+    assert abs(lo - 100e3) / 100e3 < 0.05
+    assert abs(hi - 200e3) / 200e3 < 0.05

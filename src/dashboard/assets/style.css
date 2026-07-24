@@ -221,6 +221,21 @@ button:focus-visible {
   border-bottom: 2px solid var(--cu-blue);
 }
 .surrogate-table td:first-child { font-weight: 600; }
+
+/* ---- What-if explorer sliders ---- */
+.whatif-sliders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px 28px;
+  margin: 4px 0 18px;
+}
+.whatif-slider-row label {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--cu-blue);
+  margin-bottom: 2px;
+}
 .latency-pill {
   background: #e8f2fb;
   color: var(--cu-blue);
