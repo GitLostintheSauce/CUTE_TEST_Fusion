@@ -28,7 +28,7 @@ def fisher_information(
         F: Fisher information matrix, shape (n_coils, n_coils).
     """
     if np.isscalar(noise_std):
-        W = np.eye(G.shape[0]) / noise_std**2
+        W = np.eye(G.shape[0]) / noise_std**2  # type: ignore[operator]
     else:
         W = np.diag(1.0 / np.array(noise_std)**2)
     return G.T @ W @ G
@@ -131,7 +131,7 @@ def greedy_forward_selection(
         max_sensors = n_sensors
 
     available = set(range(n_sensors))
-    selected = []
+    selected: list = []
     selected_ids = []
     errors = []
 

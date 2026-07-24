@@ -109,8 +109,8 @@ class MLPRegressor:
                 m = xb.shape[0]
                 grad = (2.0 / m) * (out - yb)  # dMSE/dout
 
-                gW = [None] * len(self.weights)
-                gb = [None] * len(self.biases)
+                gW: list = [None] * len(self.weights)
+                gb: list = [None] * len(self.biases)
                 for i in reversed(range(len(self.weights))):
                     gW[i] = acts[i].T @ grad + self.l2 * self.weights[i]
                     gb[i] = grad.sum(0)
@@ -148,7 +148,10 @@ class MLPRegressor:
 
     def save(self, path: str) -> None:
         """Save weights, biases, and normalization stats to a .npz file."""
-        arrs = {}
+        if (self.x_mean_ is None or self.x_std_ is None
+                or self.y_mean_ is None or self.y_std_ is None):
+            raise RuntimeError("Model must be fit before saving.")
+        arrs: dict[str, np.ndarray] = {}
         for i, (W, b) in enumerate(zip(self.weights, self.biases)):
             arrs[f"W{i}"] = W
             arrs[f"b{i}"] = b
@@ -157,7 +160,7 @@ class MLPRegressor:
         arrs["y_mean"] = self.y_mean_
         arrs["y_std"] = self.y_std_
         arrs["n_layers"] = np.array(len(self.weights))
-        np.savez(path, **arrs)
+        np.savez(path, **arrs)  # type: ignore[arg-type]
 
     @classmethod
     def load(cls, path: str) -> "MLPRegressor":

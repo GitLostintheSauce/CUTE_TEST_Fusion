@@ -13,24 +13,23 @@ from src.ml.mlp import MLPRegressor, r2_score
 from src.ml.physics import MU0, biot_savart_field, loop_field, loop_flux
 from src.ml.surrogate import predict_parameters, train_surrogate
 
-
 # --- physics ----------------------------------------------------------------
 
 def test_on_axis_field_matches_exact():
     """B_z on the loop axis matches the exact analytic formula."""
-    a, I = 0.3, 1.0e5
+    a, curr = 0.3, 1.0e5
     for Z in [0.0, 0.1, 0.25]:
-        _, bz = loop_field(a, 0.0, I, 1e-9, Z)
-        exact = MU0 * I * a ** 2 / (2.0 * (a ** 2 + Z ** 2) ** 1.5)
+        _, bz = loop_field(a, 0.0, curr, 1e-9, Z)
+        exact = MU0 * curr * a ** 2 / (2.0 * (a ** 2 + Z ** 2) ** 1.5)
         assert bz == pytest.approx(exact, rel=1e-6)
 
 
 def test_analytic_field_matches_biot_savart():
     """Analytic loop field agrees with direct Biot-Savart quadrature off-axis."""
-    a, I = 0.3, 1.0e5
+    a, curr = 0.3, 1.0e5
     for R, Z in [(0.45, 0.05), (0.2, 0.15), (0.5, -0.2)]:
-        br, bz = loop_field(a, 0.0, I, R, Z)
-        bbr, bbz = biot_savart_field(a, 0.0, I, R, Z)
+        br, bz = loop_field(a, 0.0, curr, R, Z)
+        bbr, bbz = biot_savart_field(a, 0.0, curr, R, Z)
         assert br == pytest.approx(bbr, rel=2e-3, abs=1e-6)
         assert bz == pytest.approx(bbz, rel=2e-3, abs=1e-6)
 

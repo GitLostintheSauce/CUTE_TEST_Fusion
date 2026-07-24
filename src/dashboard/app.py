@@ -5,6 +5,7 @@ import argparse
 import os
 import time
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import plotly.graph_objects as go
@@ -151,7 +152,9 @@ def create_app(data_dir: str | Path | None = None, token: str | None = None) -> 
     app = Dash(__name__, suppress_callback_exceptions=True)
     app.title = "CUTE Dashboard"
 
-    graph_config = {
+    # Typed Any: Dash's Graph.config expects a TypedDict, but a plain dict is
+    # the documented, working usage; annotating avoids stub false positives.
+    graph_config: Any = {
         "displaylogo": False,
         "toImageButtonOptions": {"format": "png", "scale": 2},
     }
@@ -165,7 +168,7 @@ def create_app(data_dir: str | Path | None = None, token: str | None = None) -> 
                 html.Button("Refresh shot list", id="refresh-btn",
                             n_clicks=0),
             ]),
-            dash_table.DataTable(
+            dash_table.DataTable(  # type: ignore[attr-defined]
                 id="shot-table",
                 columns=[
                     {"name": "Shot", "id": "shot_number"},

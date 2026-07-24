@@ -118,17 +118,17 @@ def compute_vessel_response(
         responses.append(_eval_sensors())
         times.append(t)
 
-    times = np.array(times)
-    responses = np.array(responses)  # (n_steps, n_sensors)
+    times_arr = np.array(times)
+    responses_arr = np.array(responses)  # (n_steps, n_sensors)
 
     # Eddy contribution = TD response - steady state
-    eddy = responses - y_ss[np.newaxis, :]  # (n_steps, n_sensors)
+    eddy = responses_arr - y_ss[np.newaxis, :]  # (n_steps, n_sensors)
 
     # Fit multi-exponential to each sensor's eddy response
     # H(t) = Σ_k A_k * exp(-t/τ_k) where τ_k are from eig_wall
     # Linear least-squares for A_k given fixed τ_k
     tau_fit = tau_eigen[:n_modes]
-    basis = np.exp(-times[:, np.newaxis] / tau_fit[np.newaxis, :])  # (n_steps, n_modes)
+    basis = np.exp(-times_arr[:, np.newaxis] / tau_fit[np.newaxis, :])  # (n_steps, n_modes)
 
     # Solve for amplitudes: eddy ≈ basis @ A.T
     # A.T shape (n_modes, n_sensors), solve basis @ A.T = eddy

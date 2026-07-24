@@ -1,26 +1,56 @@
 # CUTE Tokamak Magnetic Diagnostic Pipeline
 
-A complete magnetic equilibrium reconstruction pipeline for Columbia University's CUTE (Columbia University Tokamak for Education) spherical torus. Built on the [Open Fusion Toolkit (OFT)](https://github.com/hansec/OpenFUSIONToolkit) TokaMaker Grad-Shafranov solver, this project processes synthetic diagnostic signals, reconstructs plasma equilibria, and provides an interactive dashboard for shot review.
+![CI](https://github.com/GitLostintheSauce/CUTE_TEST_Fusion/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.12-blue.svg)
 
-## Quickstart
+A complete magnetic equilibrium reconstruction pipeline for Columbia University's CUTE (Columbia University Tokamak for Education) spherical torus. Built on the [Open Fusion Toolkit (OFT)](https://github.com/hansec/OpenFUSIONToolkit) TokaMaker Grad-Shafranov solver, this project processes diagnostic signals, reconstructs plasma equilibria, and provides an interactive dashboard for shot review.
+
+**In one sentence:** a tokamak cannot be measured directly, so this pipeline reconstructs the invisible plasma from 130 external magnetic sensors, and includes a from-scratch neural-network surrogate that does that reconstruction roughly 13,000x faster than the classical iterative method.
+
+> Note: the shots shown are synthetic (pipeline-generated) test data. No experimental CUTE data is included, and every panel is labeled accordingly.
+
+![ML surrogate vs. iterative benchmark](docs/surrogate_benchmark.png)
+
+## Run it in one command (Docker)
+
+No Python or solver setup needed:
+
+```bash
+docker compose up
+# then open http://localhost:8050
+```
+
+## Quickstart (local dev)
 
 ```bash
 # Clone and install
-git clone https://github.com/GitLostintheSauce/CUTE_TEST.git
-cd CUTE_TEST
+git clone https://github.com/GitLostintheSauce/CUTE_TEST_Fusion.git
+cd CUTE_TEST_Fusion
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-# Install OFT (see docs/operator_guide.md for details)
-source scripts/setup_env.sh
+# Generate the synthetic demo shot (used by the dashboard)
+python scripts/generate_synthetic_shot.py
 
-# Run tests
+# (Optional) train the ML surrogate
+python scripts/train_surrogate.py --samples 8000 --epochs 400
+
+# Run tests (solver-dependent tests need OFT; see docs/operator_guide.md)
 pytest tests/ -v
 
 # Launch the dashboard
 python -m src.dashboard.app --port 8050
 ```
+
+## Deploy a public link
+
+The included `Dockerfile` and `render.yaml` make deployment one step:
+
+- **Render.com:** New + -> Blueprint -> point at this repo. Render reads `render.yaml`, builds the Docker image, and gives you a public URL.
+- **Hugging Face Spaces:** create a Docker Space and push this repo; it builds the same `Dockerfile`.
+
+The dashboard runs without the OFT solver (viewing shots and the ML surrogate do not need it), which keeps the deployed image small.
 
 ## Architecture
 

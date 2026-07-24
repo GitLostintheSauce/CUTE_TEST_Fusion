@@ -34,6 +34,14 @@ Awesomeness scale: ★ (nice) → ★★★★★ (interviewer leans in).
 The "why haven't I done this yet" wins. A reviewer spends ~90 seconds; these
 decide whether they spend more.
 
+**Status: mostly DONE.** Dockerfile + docker-compose + .dockerignore,
+`render.yaml` deploy blueprint, `wsgi.py` gunicorn entrypoint, pre-commit
+config, and a polished README (badges, hero benchmark image, pitch, deploy
+instructions) are all in. CI runs ruff + mypy + the solver-independent tests
+and is green locally (ruff clean, mypy clean on 34 files). The one remaining
+piece is 1.1: actually clicking "deploy" on a hosting account, which needs
+Eleanor's login (Render or Hugging Face).
+
 | # | Idea | Awesome | Effort |
 |---|------|---------|--------|
 | 1.1 | **Deploy live** : public URL (Fly.io / Render / HF Spaces) with a Dockerfile so anyone can click and see it work | ★★★★★ | S |
