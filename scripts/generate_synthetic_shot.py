@@ -1,4 +1,9 @@
-"""Generate a synthetic shot HDF5 file with realistic data for dashboard viewing."""
+"""Generate synthetic shot HDF5 files with realistic data for dashboard viewing.
+
+Produces several distinct shots (different peak current, shape, and duration)
+so the shot browser behaves like a real shot-review tool. Shot 1 keeps its
+original seed and parameters for reproducibility.
+"""
 import os
 import sys
 
@@ -12,26 +17,40 @@ from src.forward.sensors import generate_cute_sensors
 from src.store.hdf5 import SignalData, save_shot
 from src.store.schemas import EquilibriumResult, ShotMetadata, SignalMetadata
 
+# Each entry: (shot_number, seed, ip_max [A], duration [s], kappa, delta,
+#              gas_pressure [Torr], timestamp, operator_notes)
+SHOT_SPECS = [
+    (1, 42, 200e3, 0.010, 1.7, 0.40, 1.5e-3,
+     datetime(2026, 4, 1, 12, 0, 0),
+     "Synthetic shot for dashboard demo"),
+    (2, 7, 150e3, 0.008, 1.5, 0.30, 1.2e-3,
+     datetime(2026, 4, 1, 12, 15, 0),
+     "Synthetic: lower current, reduced elongation"),
+    (3, 19, 240e3, 0.012, 1.9, 0.45, 1.8e-3,
+     datetime(2026, 4, 1, 12, 30, 0),
+     "Synthetic: high current, strongly shaped"),
+]
 
-def main():
-    rng = np.random.default_rng(42)
+
+def generate_shot(shot_number, seed, ip_max, duration, kappa, delta,
+                  gas_pressure, timestamp, notes, out_dir):
+    rng = np.random.default_rng(seed)
     sensor_config = generate_cute_sensors()
 
-    # Time base: 10ms shot at 100kHz
+    # Time base: 100kHz sampling
     fs = 100_000
-    duration = 0.01
     n_samples = int(fs * duration)
     timestamps = np.linspace(0, duration, n_samples, endpoint=False)
 
     # Plasma current ramp-up profile
-    ip_profile = 200e3 * (1 - np.exp(-timestamps / 0.002))
+    ip_profile = ip_max * (1 - np.exp(-timestamps / 0.002))
 
     meta = ShotMetadata(
-        shot_number=1,
-        timestamp=datetime(2026, 4, 1, 12, 0, 0),
+        shot_number=shot_number,
+        timestamp=timestamp,
         coil_currents={f"CS{i:02d}": 500.0 for i in range(1, 15)},
-        gas_pressure=1.5e-3,
-        operator_notes="Synthetic shot for dashboard demo",
+        gas_pressure=gas_pressure,
+        operator_notes=notes,
     )
 
     raw_signals = {}
@@ -78,19 +97,17 @@ def main():
             metadata=sig_meta, timestamps=timestamps, values=base_B,
         )
 
-    # Equilibrium results at 5 time slices
+    # Equilibrium results at 5 evenly spaced time slices
     equilibrium = []
-    time_slices = [0.001, 0.003, 0.005, 0.007, 0.009]
+    time_slices = np.linspace(0.1 * duration, 0.9 * duration, 5)
     for t in time_slices:
-        ip_at_t = float(200e3 * (1 - np.exp(-t / 0.002)))
-        frac = ip_at_t / 200e3
+        ip_at_t = float(ip_max * (1 - np.exp(-t / 0.002)))
+        frac = ip_at_t / ip_max
 
         # Boundary shape scales with plasma current
         n_bdy = 60
         theta = np.linspace(0, 2 * np.pi, n_bdy, endpoint=False)
         a = 0.15 * frac + 0.02
-        kappa = 1.7
-        delta = 0.4
         bdy_r = (0.32 + a * np.cos(theta + delta * np.sin(theta))).tolist()
         bdy_z = (kappa * a * np.sin(theta)).tolist()
 
@@ -103,10 +120,7 @@ def main():
             boundary_z=bdy_z,
         ))
 
-    out_dir = os.path.join(os.path.dirname(__file__), "..", "data", "synthetic")
-    os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, "shot_001.h5")
-
+    out_path = os.path.join(out_dir, f"shot_{shot_number:03d}.h5")
     save_shot(out_path, meta,
               raw_signals=raw_signals,
               processed_signals=processed_signals,
@@ -115,6 +129,13 @@ def main():
     print(f"Synthetic shot saved to {out_path}")
     print(f"  {len(raw_signals)} raw channels, {len(processed_signals)} processed channels")
     print(f"  {len(equilibrium)} equilibrium time slices")
+
+
+def main():
+    out_dir = os.path.join(os.path.dirname(__file__), "..", "data", "synthetic")
+    os.makedirs(out_dir, exist_ok=True)
+    for spec in SHOT_SPECS:
+        generate_shot(*spec, out_dir=out_dir)
 
 
 if __name__ == "__main__":
