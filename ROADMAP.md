@@ -75,7 +75,7 @@ Zero dependencies, so every later commit sits on a clean base.
 | # | Item | Awesome | Effort | Status |
 |---|------|---------|--------|--------|
 | 2.1 | **Restore `spec.md`**. It currently has a stray `222` on line 1 and about 260 deleted lines from an accidental edit. | 2 | S | DONE |
-| 2.2 | **Add a LICENSE file** and restore the matching README badge. Settles what the README is allowed to claim. | 3 | S | TODO |
+| 2.2 | **Add a LICENSE file** and restore the matching README badge. Settles what the README is allowed to claim. | 3 | S | DONE |
 
 ## Phase 3: Settle the physics foundation
 

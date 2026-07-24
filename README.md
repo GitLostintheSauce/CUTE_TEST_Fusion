@@ -3,6 +3,7 @@
 ![CI](https://github.com/GitLostintheSauce/CUTE_TEST_Fusion/actions/workflows/ci.yml/badge.svg)
 ![Coverage](https://img.shields.io/badge/coverage-52%25%20(CI)-yellow.svg)
 ![Python](https://img.shields.io/badge/python-3.12-blue.svg)
+![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
 
 A complete magnetic equilibrium reconstruction pipeline for Columbia University's CUTE (Columbia University Tokamak for Education) spherical torus. Built on the [Open Fusion Toolkit (OFT)](https://github.com/hansec/OpenFUSIONToolkit) TokaMaker Grad-Shafranov solver, this project processes diagnostic signals, reconstructs plasma equilibria, and provides an interactive dashboard for shot review.
 
@@ -196,4 +197,8 @@ CUTE_TEST/
 
 ## License
 
-This project is part of the CUTE tokamak educational program at Columbia University.
+Released under the [MIT License](LICENSE).
+
+This project was developed in the context of the CUTE tokamak educational
+program at Columbia University. If you intend to reuse it in an official
+Columbia or CUTE capacity, check with the program first.
