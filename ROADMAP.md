@@ -91,7 +91,7 @@ Change the foundation before writing reports about it, or the reports go stale.
 | # | Item | Awesome | Effort | Status |
 |---|------|---------|--------|--------|
 | 4.1 | **Validation / benchmark report.** Reconstruction accuracy vs. ground truth, noise-robustness sweeps, sensor-dropout studies ("lose 20% of Mirnov probes, still within X%"). | 4 | M | DONE |
-| 4.2 | **Uncertainty quantification.** Error bars on reconstructed parameters (ensemble or MC-dropout). Almost nobody does this; signals scientific maturity. | 4 | M | TODO |
+| 4.2 | **Uncertainty quantification.** Error bars on reconstructed parameters (ensemble or MC-dropout). Almost nobody does this; signals scientific maturity. | 4 | M | DONE |
 
 Order matters here: you cannot sensibly model uncertainty until you have
 characterized how the error actually behaves, and 4.1 produces exactly that.
