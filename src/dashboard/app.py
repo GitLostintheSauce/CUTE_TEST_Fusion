@@ -52,6 +52,38 @@ def _load_surrogate():
             _SURROGATE_CACHE["layout"] = None
     return _SURROGATE_CACHE.get("model"), _SURROGATE_CACHE.get("layout")
 
+
+def _load_ensemble():
+    """Return (ensemble, calibration scales) for error bars, or (None, None).
+
+    Optional: if the ensemble has not been trained the dashboard still works,
+    it just shows point estimates without uncertainty.
+    """
+    if "ens_loaded" not in _SURROGATE_CACHE:
+        _SURROGATE_CACHE["ens_loaded"] = True
+        _SURROGATE_CACHE["ensemble"] = None
+        _SURROGATE_CACHE["scales"] = None
+        try:
+            import json
+
+            from src.ml.dataset import PARAM_NAMES
+            from src.ml.uncertainty import EnsembleSurrogate
+            ens_dir = MODELS_DIR / "ensemble"
+            cal_path = MODELS_DIR / "uncertainty_calibration.json"
+            if ens_dir.is_dir():
+                _SURROGATE_CACHE["ensemble"] = EnsembleSurrogate.load(ens_dir)
+                if cal_path.exists():
+                    with open(cal_path) as f:
+                        cal = json.load(f)
+                    factors = cal.get("scale_factors", {})
+                    _SURROGATE_CACHE["scales"] = np.array(
+                        [factors.get(n, 1.0) for n in PARAM_NAMES]
+                    )
+        except Exception:
+            _SURROGATE_CACHE["ensemble"] = None
+            _SURROGATE_CACHE["scales"] = None
+    return _SURROGATE_CACHE.get("ensemble"), _SURROGATE_CACHE.get("scales")
+
 # Okabe-Ito colorblind-safe palette
 COLORS = {
     "blue": "#0072B2",
@@ -230,7 +262,10 @@ def create_app(data_dir: str | Path | None = None, token: str | None = None) -> 
             "130 magnetic diagnostic signals, as a fast alternative to "
             "iterative reconstruction. Click to sample a plasma from the "
             "reduced forward model, add measurement noise, and reconstruct "
-            "it. The surrogate runs in microseconds per shot.",
+            "it. The surrogate runs in microseconds per shot. Where an "
+            "ensemble is available, predictions carry calibrated 1-sigma "
+            "error bars; errors larger than 1 sigma are highlighted, which "
+            "should happen for roughly a third of parameters.",
             html.Div(className="control-row", children=[
                 html.Button("Sample and reconstruct a plasma",
                             id="surrogate-btn", n_clicks=0),
@@ -731,26 +766,52 @@ def get_surrogate_demo(seed: int = 0):
     # Sample one plasma (with noise) from the reduced forward model.
     X, y_true, _ = generate_dataset(n_samples=1, noise_frac=0.02,
                                     seed=10_000 + int(seed), layout=layout)
-    t0 = time.perf_counter()
-    y_pred = model.predict(X)[0]
-    latency_us = (time.perf_counter() - t0) * 1e6
     y_true = y_true[0]
+
+    # Prefer the ensemble when available: its spread is the uncertainty of the
+    # ensemble *mean*, so the prediction and its error bar must come from the
+    # same estimator. Fall back to the single network otherwise.
+    ensemble, scales = _load_ensemble()
+    y_sigma = None
+    if ensemble is not None:
+        t0 = time.perf_counter()
+        mean, sd = ensemble.predict_with_std(X)
+        latency_us = (time.perf_counter() - t0) * 1e6
+        y_pred = mean[0]
+        y_sigma = sd[0] * (scales if scales is not None else 1.0)
+    else:
+        t0 = time.perf_counter()
+        y_pred = model.predict(X)[0]
+        latency_us = (time.perf_counter() - t0) * 1e6
 
     # Comparison table.
     def _fmt(name, val):
         return f"{val:,.0f}" if name == "Ip" else f"{val:.4f}"
 
-    header = html.Tr([html.Th("Parameter"), html.Th("True"),
-                      html.Th("Predicted"), html.Th("Abs. error")])
-    rows = [header]
+    cols = [html.Th("Parameter"), html.Th("True"), html.Th("Predicted")]
+    if y_sigma is not None:
+        cols.append(html.Th("1-sigma"))
+    cols.append(html.Th("Abs. error"))
+    rows = [html.Tr(cols)]
+
     for j, (name, unit) in enumerate(zip(PARAM_NAMES, PARAM_UNITS)):
         err = abs(y_true[j] - y_pred[j])
-        rows.append(html.Tr([
+        cells = [
             html.Td(f"{name} ({unit})"),
             html.Td(_fmt(name, y_true[j])),
             html.Td(_fmt(name, y_pred[j])),
-            html.Td(_fmt(name, err)),
-        ]))
+        ]
+        if y_sigma is not None:
+            cells.append(html.Td(f"+/- {_fmt(name, y_sigma[j])}"))
+        # Flag when the truth falls outside the stated 1-sigma band; for a
+        # calibrated estimate this should happen about a third of the time.
+        outside = y_sigma is not None and err > y_sigma[j]
+        cells.append(html.Td(
+            _fmt(name, err),
+            style={"color": COLORS["vermillion"], "fontWeight": "700"}
+            if outside else None,
+        ))
+        rows.append(html.Tr(cells))
     table = html.Table(rows)
 
     # Shape comparison plot: true vs. reconstructed boundary.
