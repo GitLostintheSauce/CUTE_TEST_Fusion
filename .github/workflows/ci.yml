@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
     branches: [main]
 
@@ -34,7 +34,9 @@ jobs:
       - name: mypy type check
         run: mypy src/
 
+      # --cov-fail-under keeps the README coverage badge honest: if coverage
+      # drops meaningfully below the advertised number, CI fails.
       - name: pytest
-        run: pytest tests/ --tb=short
+        run: pytest tests/ --tb=short --cov=src --cov-report=term --cov-fail-under=75
         env:
           PYTHONPATH: "/tmp/OpenFUSIONToolkit/python:${{ github.workspace }}"

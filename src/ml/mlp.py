@@ -27,6 +27,10 @@ class MLPRegressor:
         epochs: Training epochs.
         seed: RNG seed for weight init and shuffling.
         l2: L2 weight-decay coefficient.
+        input_dropout: Fraction of input channels randomly zeroed (in
+            standardized space, so zero equals the channel mean) on each
+            training batch. This is augmentation for sensor failure: it
+            teaches the network to reconstruct from partial diagnostics.
     """
 
     hidden_layers: tuple[int, ...] = (128, 128)
@@ -35,6 +39,7 @@ class MLPRegressor:
     epochs: int = 300
     seed: int = 0
     l2: float = 1e-6
+    input_dropout: float = 0.0
 
     weights: list[np.ndarray] = field(default_factory=list, repr=False)
     biases: list[np.ndarray] = field(default_factory=list, repr=False)
@@ -104,6 +109,12 @@ class MLPRegressor:
                 xb = Xs_sh[start:start + self.batch_size]
                 yb = ys_sh[start:start + self.batch_size]
                 t += 1
+
+                if self.input_dropout > 0.0:
+                    # Zero in standardized space == impute the channel mean,
+                    # matching how dead sensors are handled at inference.
+                    keep = rng.random(xb.shape) >= self.input_dropout
+                    xb = xb * keep
 
                 out, pre, acts = self._forward(xb)
                 m = xb.shape[0]

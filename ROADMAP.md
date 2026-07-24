@@ -50,7 +50,7 @@ genuinely predictable once real flux maps or real experimental data land.
 Also note the benchmark is against a least-squares inversion of the same
 reduced model, not against the full Grad-Shafranov solve.
 
-## Phase 1: Make the repo look like a company owns it (MOSTLY DONE)
+## Phase 1: Make the repo look like a company owns it (DONE)
 
 Green badges at the top of a README are a competence signal people read
 subconsciously. A reviewer spends about 90 seconds; this phase decides whether
@@ -58,13 +58,13 @@ they spend more.
 
 | # | Item | Awesome | Effort | Status |
 |---|------|---------|--------|--------|
-| 1.1 | **GitHub Actions CI**: tests + lint on every push | 4 | S | PARTIAL |
+| 1.1 | **GitHub Actions CI**: tests + lint on every push | 4 | S | DONE |
 | 1.2 | **ruff + mypy clean** across the codebase | 4 | S | DONE |
 | 1.3 | **pre-commit hooks**: auto-format and lint on commit | 3 | S | DONE |
 | 1.4 | **Dockerfile + docker-compose** so `docker compose up` Just Works | 4 | S | DONE |
 | 1.5 | **README badges**: CI status, Python version | 4 | S | DONE |
-| 1.6 | **Coverage badge** | 3 | S | TODO |
-| 1.7 | **CI triggers on every push**, not only pushes to main and PRs to main | 3 | S | TODO |
+| 1.6 | **Coverage badge** (77%, enforced by --cov-fail-under in CI) | 3 | S | DONE |
+| 1.7 | **CI triggers on every push**, not only pushes to main and PRs to main | 3 | S | DONE |
 | 1.8 | **Deployment config**: `wsgi.py` gunicorn entrypoint, `render.yaml` blueprint | 5 | S | DONE |
 
 ## Phase 2: Housekeeping (do before anything else new)
@@ -73,7 +73,7 @@ Zero dependencies, so every later commit sits on a clean base.
 
 | # | Item | Awesome | Effort | Status |
 |---|------|---------|--------|--------|
-| 2.1 | **Restore `spec.md`**. It currently has a stray `222` on line 1 and about 260 deleted lines from an accidental edit. | 2 | S | TODO |
+| 2.1 | **Restore `spec.md`**. It currently has a stray `222` on line 1 and about 260 deleted lines from an accidental edit. | 2 | S | DONE |
 | 2.2 | **Add a LICENSE file** and restore the matching README badge. Settles what the README is allowed to claim. | 3 | S | TODO |
 
 ## Phase 3: Settle the physics foundation
@@ -89,7 +89,7 @@ Change the foundation before writing reports about it, or the reports go stale.
 
 | # | Item | Awesome | Effort | Status |
 |---|------|---------|--------|--------|
-| 4.1 | **Validation / benchmark report.** Reconstruction accuracy vs. ground truth, noise-robustness sweeps, sensor-dropout studies ("lose 20% of Mirnov probes, still within X%"). | 4 | M | TODO |
+| 4.1 | **Validation / benchmark report.** Reconstruction accuracy vs. ground truth, noise-robustness sweeps, sensor-dropout studies ("lose 20% of Mirnov probes, still within X%"). | 4 | M | DONE |
 | 4.2 | **Uncertainty quantification.** Error bars on reconstructed parameters (ensemble or MC-dropout). Almost nobody does this; signals scientific maturity. | 4 | M | TODO |
 
 Order matters here: you cannot sensibly model uncertainty until you have

@@ -36,8 +36,14 @@ def train_surrogate(
     seed: int = 0,
     epochs: int = 300,
     hidden_layers: tuple[int, ...] = (128, 128),
+    input_dropout: float = 0.0,
 ) -> tuple[MLPRegressor, SensorLayout, SurrogateMetrics]:
     """Generate data, train the MLP surrogate, and evaluate on a held-out split.
+
+    Args:
+        input_dropout: Sensor-failure augmentation; see
+            :class:`src.ml.mlp.MLPRegressor`. Set above 0 to train a model
+            that degrades gracefully when diagnostic channels go dead.
 
     Returns:
         (trained model, sensor layout, held-out metrics).
@@ -49,7 +55,8 @@ def train_surrogate(
     perm = rng.permutation(len(X))
     test_idx, train_idx = perm[:n_test], perm[n_test:]
 
-    model = MLPRegressor(hidden_layers=hidden_layers, epochs=epochs, seed=seed)
+    model = MLPRegressor(hidden_layers=hidden_layers, epochs=epochs, seed=seed,
+                         input_dropout=input_dropout)
     model.fit(X[train_idx], y[train_idx], X[test_idx], y[test_idx])
 
     y_pred = model.predict(X[test_idx])
