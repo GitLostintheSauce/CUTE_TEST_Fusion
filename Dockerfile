@@ -25,4 +25,10 @@ RUN python scripts/generate_synthetic_shot.py
 EXPOSE 8050
 
 # Bind to the platform-provided port when present (Render, HF Spaces, etc.).
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8050} --workers 2 --timeout 120 wsgi:server"]
+#
+# --preload imports the app once before forking, so workers share the import
+# and start faster. One worker by default: this is a demo dashboard with a
+# handful of concurrent viewers, and a small free-tier instance has limited
+# memory once numpy, scipy, pandas, matplotlib, and plotly are loaded
+# (measured: ~162 MB with two workers idle). Override with WEB_CONCURRENCY.
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8050} --workers ${WEB_CONCURRENCY:-1} --preload --timeout 120 wsgi:server"]
