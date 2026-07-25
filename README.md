@@ -34,8 +34,13 @@ docker compose up
 # Clone and install
 git clone https://github.com/GitLostintheSauce/CUTE_TEST_Fusion.git
 cd CUTE_TEST_Fusion
-python -m venv .venv
+
+# Requires Python 3.10+ (3.12 recommended). Note: the python3 that ships
+# with macOS is 3.9 and its bundled pip is too old for this install; use a
+# python.org or Homebrew Python instead (e.g. python3.12 below).
+python3.12 -m venv .venv
 source .venv/bin/activate
+pip install --upgrade pip
 pip install -e ".[dev]"
 
 # Generate the synthetic demo shot (used by the dashboard)
