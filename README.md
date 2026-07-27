@@ -121,6 +121,21 @@ Results on a held-out set (`models/surrogate_metrics.json`):
 | Inference speed | ~1 µs/shot |
 | Speedup vs. iterative baseline | ~13,000× |
 
+Where the speedup number comes from (`scripts/train_surrogate.py`): 15.3 ms/shot
+for the iterative baseline against 1.14 µs/shot for the surrogate, both measured
+in the same run on the same held-out benchmark shots, inference only (training
+excluded), on an Apple M1, CPU only, no GPU. Recorded in
+`models/surrogate_metrics.json`.
+
+One caveat worth naming, since it flatters the surrogate: the surrogate is timed
+as a single vectorized batch and amortized per shot, while the baseline is timed
+one shot at a time in a Python loop, because that is how a nonlinear
+least-squares inversion actually runs. So the ratio compares batched inference
+against sequential fitting, not two implementations tuned equally hard. The
+order-of-magnitude conclusion (microseconds vs milliseconds) holds either way,
+but ~13,000x is the favorable end of the range, and the absolute times move with
+hardware.
+
 The iterative baseline is slightly more accurate; the surrogate trades a small
 accuracy cost for a large speed gain, which is the tradeoff that makes
 real-time reconstruction feasible. Train it with:
