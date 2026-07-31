@@ -136,3 +136,47 @@ def generate_dataset(
         X = X + rng.normal(0.0, 1.0, X.shape) * (noise_frac * scale)
 
     return X, y, layout
+
+
+def noisy_replicas(
+    y_params: np.ndarray,
+    n_replicas: int = 1,
+    noise_frac: float = 0.02,
+    seed: int = 0,
+    layout: SensorLayout | None = None,
+) -> tuple[np.ndarray, SensorLayout]:
+    """Repeated noisy measurements of a *single fixed* plasma state.
+
+    :func:`generate_dataset` draws a new plasma and new noise together, so
+    consecutive calls differ in both. This function holds the plasma fixed and
+    varies only the measurement noise, which separates measurement error from
+    the surrogate's model error: every replica has identical ground truth, so
+    any spread in the reconstruction is attributable to noise alone.
+
+    Args:
+        y_params: Plasma parameters [Ip, R0, Z0, a] for the one true state.
+        n_replicas: Number of independent noise draws of that same state.
+        noise_frac: Gaussian sensor noise as a fraction of per-channel signal
+            scale, matching the convention in :func:`generate_dataset`.
+        seed: RNG seed for the noise only.
+        layout: Optional precomputed sensor layout.
+
+    Returns:
+        X: (n_replicas, n_sensors) noisy signals for the one plasma.
+        layout: The SensorLayout used.
+    """
+    rng = np.random.default_rng(seed)
+    layout = layout or SensorLayout.from_config()
+
+    y_params = np.asarray(y_params, dtype=float)
+    clean = forward_signals(y_params[0], y_params[1], y_params[2],
+                            y_params[3], layout)
+    X = np.tile(clean, (n_replicas, 1))
+
+    if noise_frac > 0:
+        # Scale from the noise-free signal itself, so the noise level matches
+        # generate_dataset's per-channel convention for a single state.
+        scale = np.maximum(np.abs(clean), 1e-9)
+        X = X + rng.normal(0.0, 1.0, X.shape) * (noise_frac * scale)
+
+    return X, layout

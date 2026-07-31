@@ -84,6 +84,10 @@ def _load_ensemble():
             _SURROGATE_CACHE["scales"] = None
     return _SURROGATE_CACHE.get("ensemble"), _SURROGATE_CACHE.get("scales")
 
+# Reference plasma for the "same plasma, new noise" mode. Constant so the true
+# state stays put across clicks while only the noise draw changes.
+_FIXED_PLASMA_SEED = 4242
+
 # Okabe-Ito colorblind-safe palette
 COLORS = {
     "blue": "#0072B2",
@@ -272,15 +276,30 @@ def create_app(data_dir: str | Path | None = None, token: str | None = None) -> 
             "ML Surrogate Reconstruction (live)",
             "A neural network trained to recover plasma parameters from the "
             "130 magnetic diagnostic signals, as a fast alternative to "
-            "iterative reconstruction. Click to sample a plasma from the "
-            "reduced forward model, add measurement noise, and reconstruct "
-            "it. The surrogate runs in microseconds per shot. Where an "
-            "ensemble is available, predictions carry calibrated 1-sigma "
-            "error bars; errors larger than 1 sigma are highlighted, which "
-            "should happen for roughly a third of parameters.",
+            "iterative reconstruction. This panel is independent of the shot "
+            "selected above: it draws plasmas from the reduced forward model, "
+            "adds measurement noise, and reconstructs them. The surrogate "
+            "runs in microseconds per shot. Where an ensemble is available, "
+            "predictions carry calibrated 1-sigma error bars; errors larger "
+            "than 1 sigma are highlighted, which should happen for roughly a "
+            "third of parameters. Use 'same plasma, new noise' to hold the "
+            "true state fixed and vary only the measurement noise, which "
+            "separates measurement error from the surrogate's model error.",
             html.Div(className="control-row", children=[
-                html.Button("Sample and reconstruct a plasma",
+                html.Button("Draw and reconstruct",
                             id="surrogate-btn", n_clicks=0),
+                dcc.RadioItems(
+                    id="surrogate-mode",
+                    options=[
+                        {"label": " new plasma each click",
+                         "value": "new"},
+                        {"label": " same plasma, new noise",
+                         "value": "fixed"},
+                    ],
+                    value="new",
+                    inline=True,
+                    className="mode-radio",
+                ),
                 html.Span(id="surrogate-latency", className="latency-pill"),
             ]),
             html.Div(className="surrogate-body", children=[
@@ -544,9 +563,10 @@ def _register_callbacks(app: Dash):
         Output("surrogate-graph", "figure"),
         Output("surrogate-latency", "children"),
         Input("surrogate-btn", "n_clicks"),
+        Input("surrogate-mode", "value"),
     )
-    def run_surrogate(n_clicks):
-        return get_surrogate_demo(seed=n_clicks)
+    def run_surrogate(n_clicks, mode):
+        return get_surrogate_demo(seed=n_clicks, fixed_plasma=(mode == "fixed"))
 
     @app.callback(
         Output("whatif-table", "children"),
@@ -795,8 +815,16 @@ def _boundary_ellipse(R0, Z0, a, kappa=1.6, n=80):
     return R0 + a * np.cos(t), Z0 + kappa * a * np.sin(t)
 
 
-def get_surrogate_demo(seed: int = 0):
-    """Sample a plasma, reconstruct it with the surrogate, and build UI output.
+def get_surrogate_demo(seed: int = 0, fixed_plasma: bool = False):
+    """Draw a plasma, reconstruct it with the surrogate, and build UI output.
+
+    Args:
+        seed: Varies per click, so each click gives a different draw.
+        fixed_plasma: When True, hold the true plasma constant and re-roll only
+            the measurement noise. The reconstruction then varies solely
+            because of noise, which separates measurement error from the
+            surrogate's model error. When False, each click draws a new plasma
+            *and* new noise, so the true values change too.
 
     Returns (table_children, figure, latency_text) for the dashboard callback.
     """
@@ -812,12 +840,21 @@ def get_surrogate_demo(seed: int = 0):
         )
         return msg, empty_fig, ""
 
-    from src.ml.dataset import generate_dataset
+    from src.ml.dataset import generate_dataset, noisy_replicas
 
-    # Sample one plasma (with noise) from the reduced forward model.
-    X, y_true, _ = generate_dataset(n_samples=1, noise_frac=0.02,
-                                    seed=10_000 + int(seed), layout=layout)
-    y_true = y_true[0]
+    if fixed_plasma:
+        # One reference plasma, drawn from a constant seed so it never moves,
+        # then a fresh noise draw per click.
+        _, y_ref, _ = generate_dataset(n_samples=1, noise_frac=0.0,
+                                       seed=_FIXED_PLASMA_SEED, layout=layout)
+        y_true = y_ref[0]
+        X, _ = noisy_replicas(y_true, n_replicas=1, noise_frac=0.02,
+                              seed=10_000 + int(seed), layout=layout)
+    else:
+        # A new plasma *and* new noise on every click.
+        X, y_true, _ = generate_dataset(n_samples=1, noise_frac=0.02,
+                                        seed=10_000 + int(seed), layout=layout)
+        y_true = y_true[0]
 
     # Prefer the ensemble when available: its spread is the uncertainty of the
     # ensemble *mean*, so the prediction and its error bar must come from the
@@ -841,14 +878,53 @@ def get_surrogate_demo(seed: int = 0):
     fig = go.Figure()
     tr_r, tr_z = _boundary_ellipse(y_true[1], y_true[2], y_true[3])
     pr_r, pr_z = _boundary_ellipse(y_pred[1], y_pred[2], y_pred[3])
+
+    # Shade the 1-sigma band in minor radius, so the stated uncertainty is
+    # visible on the shape and not only in the table.
+    if y_sigma is not None:
+        out_r, out_z = _boundary_ellipse(y_pred[1], y_pred[2],
+                                         y_pred[3] + y_sigma[3])
+        in_r, in_z = _boundary_ellipse(y_pred[1], y_pred[2],
+                                       max(y_pred[3] - y_sigma[3], 1e-4))
+        fig.add_trace(go.Scatter(
+            x=np.concatenate([out_r, in_r[::-1]]),
+            y=np.concatenate([out_z, in_z[::-1]]),
+            fill="toself", fillcolor="rgba(213, 94, 0, 0.16)",
+            line=dict(width=0), hoverinfo="skip",
+            name="+/- 1 sigma in a",
+        ))
+
     fig.add_trace(go.Scatter(x=tr_r, y=tr_z, mode="lines", name="True plasma",
                              line=dict(color=COLORS["gray"], width=3)))
     fig.add_trace(go.Scatter(x=pr_r, y=pr_z, mode="lines",
                              name="Surrogate reconstruction",
                              line=dict(color=COLORS["vermillion"], width=2,
                                        dash="dash")))
+    # Error bars on the reconstructed axis position (R0, Z0).
+    if y_sigma is not None:
+        fig.add_trace(go.Scatter(
+            x=[y_pred[1]], y=[y_pred[2]], mode="markers",
+            name="Reconstructed axis +/- 1 sigma",
+            marker=dict(color=COLORS["vermillion"], size=7, symbol="x"),
+            error_x=dict(type="data", array=[y_sigma[1]], visible=True,
+                         color=COLORS["vermillion"], thickness=1.5, width=5),
+            error_y=dict(type="data", array=[y_sigma[2]], visible=True,
+                         color=COLORS["vermillion"], thickness=1.5, width=5),
+        ))
+        fig.add_trace(go.Scatter(
+            x=[y_true[1]], y=[y_true[2]], mode="markers", name="True axis",
+            marker=dict(color=COLORS["gray"], size=7, symbol="circle-open",
+                        line=dict(width=2)),
+        ))
+
     _style_figure(fig, "True vs. reconstructed plasma shape", "R (m)", "Z (m)")
     fig.update_layout(yaxis_scaleanchor="x", yaxis_scaleratio=1)
+    if y_sigma is not None:
+        # Four legend entries need more room than the shared style allows, or
+        # they overlap the x-axis title.
+        fig.update_layout(margin=dict(l=65, r=25, t=55, b=110),
+                          legend=dict(orientation="v", yanchor="top",
+                                      y=-0.16, x=0, font=dict(size=12)))
 
     latency = f"Inference: {latency_us:.0f} us/shot"
     return table, fig, latency

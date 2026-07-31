@@ -183,3 +183,60 @@ def test_whatif_tracks_sliders():
     lo, hi = predicted_ip(100), predicted_ip(200)
     assert abs(lo - 100e3) / 100e3 < 0.05
     assert abs(hi - 200e3) / 200e3 < 0.05
+
+
+def test_surrogate_fixed_plasma_holds_truth_constant():
+    """Same-plasma mode must vary only the noise, not the ground truth."""
+    from src.dashboard.app import _load_surrogate, get_surrogate_demo
+
+    model, _ = _load_surrogate()
+    if model is None:
+        pytest.skip("no trained surrogate available")
+
+    def truth_and_pred(seed):
+        table, _, _ = get_surrogate_demo(seed=seed, fixed_plasma=True)
+        # rows[0] is the header; each later row is [name, true, pred, ...].
+        rows = table.children[1:]
+        true = [r.children[1].children for r in rows]
+        pred = [r.children[2].children for r in rows]
+        return true, pred
+
+    true_a, pred_a = truth_and_pred(1)
+    true_b, pred_b = truth_and_pred(2)
+
+    # Ground truth is identical across clicks ...
+    assert true_a == true_b
+    # ... while the reconstruction moves, because the noise draw changed.
+    assert pred_a != pred_b
+
+
+def test_surrogate_new_plasma_changes_truth():
+    """Default mode draws a new plasma, so the truth changes between clicks."""
+    from src.dashboard.app import _load_surrogate, get_surrogate_demo
+
+    model, _ = _load_surrogate()
+    if model is None:
+        pytest.skip("no trained surrogate available")
+
+    def truth(seed):
+        table, _, _ = get_surrogate_demo(seed=seed, fixed_plasma=False)
+        return [r.children[1].children for r in table.children[1:]]
+
+    assert truth(1) != truth(2)
+
+
+def test_noisy_replicas_fixes_state_and_varies_noise():
+    """Replicas of one plasma differ only through the noise draw."""
+    import numpy as np
+
+    from src.ml.dataset import noisy_replicas
+
+    y = np.array([1.0e5, 0.32, 0.0, 0.10])
+    X, layout = noisy_replicas(y, n_replicas=8, noise_frac=0.02, seed=0)
+
+    assert X.shape == (8, layout.n_sensors)
+    # Every replica is distinct (noise applied independently) ...
+    assert not np.allclose(X[0], X[1])
+    # ... but they scatter about one common noise-free signal.
+    clean, _ = noisy_replicas(y, n_replicas=1, noise_frac=0.0, seed=0)
+    assert np.allclose(X.mean(axis=0), clean[0], rtol=0.3, atol=1e-9)
