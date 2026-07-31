@@ -147,6 +147,20 @@ rework. This is why the demo GIF is here and not at the start.
 | 9.1 | **Pre-flight.** CI green, Docker image builds, surrogate model and demo data present in the image. | 4 | S | TODO |
 | 9.2 | **Deploy live.** Public URL via Render, Fly.io, or Hugging Face Spaces so anyone can click and see it work. Deliberately the final step. | 5 | S | TODO |
 
+## Phase 10: Teachable workflow
+
+CUTE is an educational device, so the pipeline is more useful as something a
+class can reconstruct than as a finished application. This phase is about
+turning working code into a followable workflow.
+
+| # | Item | Awesome | Effort | Status |
+|---|------|---------|--------|--------|
+| 10.1 | **Notebook: sensors and the forward model.** Geometry, what a given plasma produces at each of the 130 diagnostics, run it and see. Narrative form, reasoning visible. | 5 | M | TODO |
+| 10.2 | **Notebook: reconstruction.** From signals back to plasma parameters, showing the iterative solve rather than hiding it behind a CLI. | 5 | M | TODO |
+| 10.3 | **Notebook: the ML surrogate.** Generate a dataset, train, benchmark against the classical inversion, examine failure modes honestly. | 5 | M | TODO |
+| 10.4 | **Interactive noise control in the dashboard.** Sensor noise is hardcoded at 2% and invisible in the UI. A slider from 0 to ~10% makes noise susceptibility something a viewer can explore, reusing the Phase 4.1 study. | 4 | S | TODO |
+| 10.5 | **Characterize the training distribution.** Robustness to noise and sensor loss is a property of the training distribution and loss function, not a separate feature. Document what distribution the surrogate was trained on and where a real equilibrium would have to lie for its error bars to hold. Partly blocked on real data. | 4 | M | TODO |
+
 ---
 
 ## Notes
