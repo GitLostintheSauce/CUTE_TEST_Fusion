@@ -922,9 +922,12 @@ def get_surrogate_demo(seed: int = 0, fixed_plasma: bool = False):
     if y_sigma is not None:
         # Four legend entries need more room than the shared style allows, or
         # they overlap the x-axis title.
-        fig.update_layout(margin=dict(l=65, r=25, t=55, b=110),
-                          legend=dict(orientation="v", yanchor="top",
-                                      y=-0.16, x=0, font=dict(size=12)))
+        # Four entries do not fit under the plot without colliding with the
+        # x-axis title, so this figure legends to the right instead.
+        fig.update_layout(margin=dict(l=65, r=25, t=55, b=55),
+                          legend=dict(orientation="v", yanchor="top", y=1.0,
+                                      xanchor="left", x=1.02,
+                                      font=dict(size=11)))
 
     latency = f"Inference: {latency_us:.0f} us/shot"
     return table, fig, latency
