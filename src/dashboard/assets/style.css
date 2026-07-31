@@ -1,18 +1,45 @@
-/* CUTE Dashboard stylesheet (loaded automatically by Dash from assets/) */
+/* CUTE Dashboard stylesheet (loaded automatically by Dash from assets/)
+ *
+ * Design intent: scientific instrument software. Restrained colour, thin
+ * rules instead of shadows, dense but legible type, and tabular figures
+ * everywhere a number appears so columns align and values stay comparable
+ * at a glance. No webfonts: the app must render identically offline and
+ * inside the container, so the stacks below resolve to high quality system
+ * faces on every platform we target.
+ */
 
 :root {
-  --cu-blue: #003865;
-  --cu-blue-2: #00509e;
+  --cu-blue: #0b3d68;
+  --cu-blue-2: #14527f;
   --cu-light-blue: #6cace4;
-  --ink: #16202b;
-  --muted: #5a6672;
-  --paper: #eef1f5;
+  --ink: #101820;
+  --ink-2: #2c3a47;
+  --muted: #61707f;
+  --paper: #f4f6f8;
   --card: #ffffff;
-  --border: #d7dde5;
+  --border: #dce3ea;
+  --border-strong: #c2ccd6;
   --accent: #b9d9eb;
-  --warn-bg: #fff3cd;
-  --warn-ink: #7a5b00;
-  --warn-border: #e6c968;
+  --rule: #e8edf2;
+  --warn-bg: #fdf6e3;
+  --warn-ink: #6b5310;
+  --warn-border: #e3cf8f;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  --radius: 4px;
+
+  /* Dash 4 ships a violet interactive accent and drives its own components
+   * from these tokens. Overriding the tokens retints sliders and friends
+   * consistently, which beats fighting Dash's selector specificity rule by
+   * rule (its own rules use :not() qualifiers that outrank a plain class).
+   */
+  --Dash-Fill-Interactive-Strong: #0b3d68;
+  --Dash-Fill-Interactive: #14527f;
+  --Dash-Border-Interactive: #0b3d68;
 }
 
 * { box-sizing: border-box; }
@@ -23,65 +50,73 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: "Helvetica Neue", Arial, "Segoe UI", sans-serif;
-  font-size: 15.5px;
-  line-height: 1.5;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Header ---- */
 .app-header {
-  background: linear-gradient(90deg, #002B4F 0%, var(--cu-blue) 60%, #0a4a80 100%);
+  background: var(--cu-blue);
   color: #fff;
-  padding: 14px 28px;
+  padding: 13px 26px;
   display: flex;
-  align-items: center;
-  gap: 14px;
+  align-items: baseline;
+  gap: 16px;
   flex-wrap: wrap;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
 }
 .app-header h1 {
   margin: 0;
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-size: 1.12rem;
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 .app-header .subtitle {
-  color: var(--accent);
-  font-size: 0.9rem;
+  color: #c3d7e8;
+  font-size: 0.855rem;
+  font-weight: 400;
   flex: 1;
   min-width: 220px;
+  letter-spacing: 0.005em;
 }
 .badge-demo {
-  background: var(--warn-bg);
-  color: var(--warn-ink);
-  border: 1px solid var(--warn-border);
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 4px 12px;
+  background: transparent;
+  color: #f2d98a;
+  border: 1px solid rgba(242, 217, 138, 0.55);
+  border-radius: var(--radius);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 3px 9px;
   white-space: nowrap;
+  align-self: center;
 }
 
 /* ---- Shell: sidebar + main ---- */
 .app-shell {
   display: flex;
   align-items: flex-start;
-  gap: 22px;
+  gap: 20px;
   max-width: 1700px;
   margin: 0 auto;
-  padding: 22px 24px 60px;
+  padding: 20px 24px 60px;
 }
 .sidebar {
-  width: 380px;
+  width: 372px;
   flex-shrink: 0;
   position: sticky;
-  top: 76px;
-  max-height: calc(100vh - 96px);
+  top: 72px;
+  max-height: calc(100vh - 92px);
   overflow-y: auto;
   padding-right: 2px;
 }
@@ -100,45 +135,51 @@ body {
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px 22px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 4px rgba(10, 30, 60, 0.07);
+  border-radius: var(--radius);
+  padding: 16px 20px 18px;
+  margin-bottom: 18px;
 }
 .card h2 {
-  margin: 0 0 2px;
-  font-size: 1.08rem;
+  margin: 0 0 5px;
+  font-size: 0.775rem;
+  font-weight: 700;
   color: var(--cu-blue);
-  letter-spacing: 0.01em;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--rule);
 }
 .card .card-help {
-  margin: 0 0 14px;
+  margin: 0 0 13px;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  max-width: 78ch;
 }
 .card.about-card p {
-  font-size: 0.88rem;
-  color: var(--ink);
+  font-size: 0.865rem;
+  color: var(--ink-2);
   margin: 0 0 8px;
 }
 .about-note {
   background: var(--warn-bg);
   border: 1px solid var(--warn-border);
+  border-left: 3px solid var(--warn-border);
   color: var(--warn-ink);
-  border-radius: 6px;
-  padding: 8px 10px;
-  font-size: 0.84rem;
-  font-weight: 600;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 9px 12px;
+  font-size: 0.83rem;
+  font-weight: 500;
 }
 
 /* Two-column grid for plots on wide screens */
 .plot-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 18px;
+  margin-bottom: 18px;
 }
 .plot-grid > .card { margin-bottom: 0; }
-.plot-grid { margin-bottom: 20px; }
 @media (max-width: 1500px) {
   .plot-grid { grid-template-columns: 1fr; }
 }
@@ -146,38 +187,66 @@ body {
 /* ---- Controls ---- */
 .control-row {
   display: flex;
-  gap: 14px;
+  gap: 13px;
   align-items: center;
   flex-wrap: wrap;
   margin-bottom: 10px;
 }
 .control-row label {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 button, .btn {
   background: var(--cu-blue);
   color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 9px 16px;
-  font-size: 0.9rem;
+  border: 1px solid var(--cu-blue);
+  border-radius: var(--radius);
+  padding: 7px 15px;
+  font-family: inherit;
+  font-size: 0.83rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: background 120ms ease;
+  transition: background 120ms ease, border-color 120ms ease;
 }
-button:hover, .btn:hover { background: var(--cu-blue-2); }
+button:hover, .btn:hover {
+  background: var(--cu-blue-2);
+  border-color: var(--cu-blue-2);
+}
 button:focus-visible {
-  outline: 3px solid var(--cu-light-blue);
+  outline: 2px solid var(--cu-light-blue);
   outline-offset: 2px;
 }
+
+/* Radio groups: quiet, inline, instrument-panel style */
+.mode-radio {
+  display: inline-flex;
+  gap: 14px;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+}
+.mode-radio label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mode-radio input[type="radio"] { accent-color: var(--cu-blue); }
 
 /* ---- Data table ---- */
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td,
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
-  font-size: 0.87rem;
-  padding: 7px 10px;
+  font-size: 0.845rem;
+  padding: 6px 10px;
+  font-variant-numeric: tabular-nums;
+}
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+  letter-spacing: 0.04em;
 }
 
 /* ---- Auth gate ---- */
@@ -188,39 +257,64 @@ button:focus-visible {
 }
 .auth-card input {
   width: 100%;
-  padding: 10px 12px;
-  font-size: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
   margin: 12px 0;
 }
-.auth-error { color: #b00020; font-weight: 600; }
+.auth-error { color: #a3121f; font-weight: 600; }
 
 /* ---- ML surrogate panel ---- */
-.surrogate-card { border-top: 3px solid var(--cu-blue); }
+.surrogate-card { border-left: 2px solid var(--cu-blue); }
 .surrogate-body {
   display: flex;
   gap: 20px;
   align-items: stretch;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
-.surrogate-table { flex: 0 0 340px; }
+/* The table sizes to its content (monospaced figures need the room) and the
+ * plot takes the rest. min-width:0 on both keeps the plot from being pushed
+ * onto its own line by Plotly's intrinsic width.
+ */
+.surrogate-table { flex: 0 1 auto; min-width: 0; }
+.surrogate-body > .dash-graph { flex: 1 1 0; min-width: 0; }
 .surrogate-table table {
   border-collapse: collapse;
   width: 100%;
-  font-size: 0.9rem;
+  font-size: 0.855rem;
+  font-variant-numeric: tabular-nums;
 }
 .surrogate-table th, .surrogate-table td {
-  text-align: left;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
+  text-align: right;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--rule);
 }
 .surrogate-table th {
-  color: var(--cu-blue);
-  font-weight: 700;
-  border-bottom: 2px solid var(--cu-blue);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: right;
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
 }
-.surrogate-table td:first-child { font-weight: 600; }
+/* Parameter name column reads as a label, values read as data */
+.surrogate-table th:first-child,
+.surrogate-table td:first-child {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink);
+}
+.surrogate-table td:not(:first-child) {
+  font-family: var(--font-mono);
+  font-size: 0.815rem;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.surrogate-table tr:last-child td { border-bottom: none; }
 
 /* ---- What-if explorer sliders ---- */
 .whatif-sliders {
@@ -231,29 +325,68 @@ button:focus-visible {
 }
 .whatif-slider-row label {
   display: block;
-  font-size: 0.88rem;
+  font-size: 0.755rem;
   font-weight: 600;
-  color: var(--cu-blue);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
   margin-bottom: 2px;
 }
-.latency-pill {
-  background: #e8f2fb;
-  color: var(--cu-blue);
-  border: 1px solid var(--accent);
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 0.85rem;
-  font-weight: 700;
+/* Sliders: Dash 4 ships a violet accent that clashes with the palette.
+ * These are the dash-slider-* classes, not the older rc-slider ones.
+ */
+.dash-slider-root .dash-slider-track { background-color: var(--border); }
+.dash-slider-thumb { border: 2px solid #fff; }
+.dash-slider-thumb:focus,
+.dash-slider-thumb:hover {
+  background-color: var(--cu-blue-2);
+  box-shadow: 0 0 0 4px rgba(11, 61, 104, 0.18);
+}
+.dash-slider-mark {
+  color: var(--muted);
+  font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
 }
-@media (max-width: 900px) {
+.dash-slider-tooltip {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius);
+}
+/* The numeric entry box beside each slider */
+.dash-slider-input,
+.dash-range-slider-input {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+
+.latency-pill {
+  background: transparent;
+  color: var(--cu-blue);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 5px 11px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 1000px) {
+  .surrogate-body { flex-wrap: wrap; }
   .surrogate-table { flex: 1 1 100%; }
+  .surrogate-body > .dash-graph { flex: 1 1 100%; }
 }
 
 /* ---- Footer ---- */
 .app-footer {
   text-align: center;
   color: var(--muted);
-  font-size: 0.82rem;
-  padding: 20px;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  padding: 22px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
 }

@@ -98,8 +98,14 @@ COLORS = {
     "purple": "#CC79A7",
     "yellow": "#F0E442",
     "gray": "#7f8c99",
-    "ink": "#16202b",
+    "ink": "#101820",
+    "muted": "#61707f",
 }
+
+# Mirrors --font-sans in assets/style.css so figures and page agree. No
+# webfonts: the app must look the same offline and inside the container.
+_FIG_FONT = ('ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, '
+             '"Helvetica Neue", Arial, sans-serif')
 PLOT_COLORWAY = [
     COLORS["blue"], COLORS["orange"], COLORS["green"], COLORS["vermillion"],
     COLORS["sky"], COLORS["purple"], COLORS["yellow"],
@@ -110,22 +116,30 @@ def _style_figure(fig: go.Figure, title: str, xaxis_title: str = "",
                   yaxis_title: str = "") -> go.Figure:
     """Apply the shared dashboard look: readable fonts, clean grid, safe colors."""
     fig.update_layout(
-        title=dict(text=title, font=dict(size=17, color=COLORS["ink"])),
+        # Plot titles sit under a card heading that already names the panel, so
+        # they stay quiet: sentence case, muted, and clearly subordinate.
+        title=dict(text=title, font=dict(size=13, color=COLORS["muted"]),
+                   x=0, xanchor="left", pad=dict(b=8)),
         xaxis_title=xaxis_title,
         yaxis_title=yaxis_title,
-        font=dict(family="Helvetica Neue, Arial, sans-serif", size=14,
-                  color=COLORS["ink"]),
+        font=dict(family=_FIG_FONT, size=12.5, color=COLORS["ink"]),
         colorway=PLOT_COLORWAY,
         plot_bgcolor="white",
         paper_bgcolor="white",
-        margin=dict(l=65, r=25, t=55, b=55),
-        legend=dict(orientation="h", yanchor="top", y=-0.22, x=0),
+        margin=dict(l=62, r=24, t=46, b=52),
+        legend=dict(orientation="h", yanchor="top", y=-0.22, x=0,
+                    font=dict(size=11.5)),
         hovermode="x unified",
+        hoverlabel=dict(font=dict(family=_FIG_FONT, size=12),
+                        bgcolor="white", bordercolor="#c2ccd6"),
     )
-    fig.update_xaxes(showgrid=True, gridcolor="#e6eaf0", zeroline=False,
-                     showline=True, linecolor="#c8cfd9", ticks="outside")
-    fig.update_yaxes(showgrid=True, gridcolor="#e6eaf0", zeroline=False,
-                     showline=True, linecolor="#c8cfd9", ticks="outside")
+    axis_style = dict(showgrid=True, gridcolor="#eef2f6", gridwidth=1,
+                      zeroline=False, showline=True, linecolor="#c2ccd6",
+                      linewidth=1, ticks="outside", tickcolor="#c2ccd6",
+                      ticklen=4, tickfont=dict(size=11.5),
+                      title_font=dict(size=12))
+    fig.update_xaxes(**axis_style)
+    fig.update_yaxes(**axis_style)
     return fig
 
 
@@ -229,20 +243,32 @@ def create_app(data_dir: str | Path | None = None, token: str | None = None) -> 
                 page_size=12,
                 sort_action="native",
                 style_table={"overflowX": "auto"},
+                # A quiet header rule rather than a filled bar, matching the
+                # uppercase micro-labels used elsewhere in the page.
                 style_header={
-                    "backgroundColor": "#003865", "color": "white",
+                    "backgroundColor": "transparent",
+                    "color": "#61707f",
                     "fontWeight": "600",
+                    "fontSize": "0.7rem",
+                    "letterSpacing": "0.08em",
+                    "textTransform": "uppercase",
+                    "borderBottom": "1px solid #c2ccd6",
+                    "borderTop": "none",
+                    "borderLeft": "none",
+                    "borderRight": "none",
                 },
                 style_cell={
-                    "fontFamily": "Helvetica Neue, Arial, sans-serif",
+                    "fontFamily": "inherit",
                     "textAlign": "left",
+                    "fontVariantNumeric": "tabular-nums",
+                    "border": "none",
+                    "borderBottom": "1px solid #e8edf2",
                 },
                 style_data_conditional=[
-                    {"if": {"row_index": "odd"},
-                     "backgroundColor": "#f4f6f9"},
                     {"if": {"state": "selected"},
-                     "backgroundColor": "#b9d9eb",
-                     "border": "1px solid #003865"},
+                     "backgroundColor": "#eaf2f9",
+                     "border": "none",
+                     "borderBottom": "1px solid #e8edf2"},
                 ],
             ),
         ),
@@ -758,7 +784,8 @@ def get_parameter_timeline_figure(shot_path: str | None) -> go.Figure:
         hovertemplate="li = %{y:.2f}<extra></extra>",
     ))
 
-    _style_figure(fig, "Parameter Timeline", "Time Index")
+    # No plot title: the card heading above already says "Parameter Timeline".
+    _style_figure(fig, "", "Time Index")
     fig.update_layout(
         yaxis=dict(title="Plasma current Ip (A)", side="left"),
         yaxis2=dict(title="q95, beta_pol, li (dimensionless)",
@@ -891,20 +918,20 @@ def get_surrogate_demo(seed: int = 0, fixed_plasma: bool = False):
             y=np.concatenate([out_z, in_z[::-1]]),
             fill="toself", fillcolor="rgba(213, 94, 0, 0.16)",
             line=dict(width=0), hoverinfo="skip",
-            name="+/- 1 sigma in a",
+            name="1-sigma band",
         ))
 
-    fig.add_trace(go.Scatter(x=tr_r, y=tr_z, mode="lines", name="True plasma",
+    fig.add_trace(go.Scatter(x=tr_r, y=tr_z, mode="lines", name="True",
                              line=dict(color=COLORS["gray"], width=3)))
     fig.add_trace(go.Scatter(x=pr_r, y=pr_z, mode="lines",
-                             name="Surrogate reconstruction",
+                             name="Reconstructed",
                              line=dict(color=COLORS["vermillion"], width=2,
                                        dash="dash")))
     # Error bars on the reconstructed axis position (R0, Z0).
     if y_sigma is not None:
         fig.add_trace(go.Scatter(
             x=[y_pred[1]], y=[y_pred[2]], mode="markers",
-            name="Reconstructed axis +/- 1 sigma",
+            name="Axis +/- 1 sigma",
             marker=dict(color=COLORS["vermillion"], size=7, symbol="x"),
             error_x=dict(type="data", array=[y_sigma[1]], visible=True,
                          color=COLORS["vermillion"], thickness=1.5, width=5),
@@ -922,12 +949,14 @@ def get_surrogate_demo(seed: int = 0, fixed_plasma: bool = False):
     if y_sigma is not None:
         # Four legend entries need more room than the shared style allows, or
         # they overlap the x-axis title.
-        # Four entries do not fit under the plot without colliding with the
-        # x-axis title, so this figure legends to the right instead.
-        fig.update_layout(margin=dict(l=65, r=25, t=55, b=55),
-                          legend=dict(orientation="v", yanchor="top", y=1.0,
-                                      xanchor="left", x=1.02,
-                                      font=dict(size=11)))
+        # A plasma cross-section leaves empty corners, and five entries below
+        # the axes would collide with the x-axis title. Sit the legend inside
+        # the plot instead, over that empty space.
+        fig.update_layout(legend=dict(
+            orientation="v", yanchor="top", y=0.99, xanchor="left", x=0.01,
+            font=dict(size=10.5), bgcolor="rgba(255,255,255,0.82)",
+            bordercolor="#dce3ea", borderwidth=1,
+        ))
 
     latency = f"Inference: {latency_us:.0f} us/shot"
     return table, fig, latency
@@ -1015,7 +1044,7 @@ def get_whatif_demo(ip_ka: float, r0: float, z0: float, a: float):
     fig.add_trace(go.Scatter(x=tr_r, y=tr_z, mode="lines", name="Set plasma",
                              line=dict(color=COLORS["gray"], width=3)))
     fig.add_trace(go.Scatter(x=pr_r, y=pr_z, mode="lines",
-                             name="Surrogate reconstruction",
+                             name="Reconstructed",
                              line=dict(color=COLORS["vermillion"], width=2,
                                        dash="dash")))
     _style_figure(fig, "Set vs. reconstructed plasma shape", "R (m)", "Z (m)")
