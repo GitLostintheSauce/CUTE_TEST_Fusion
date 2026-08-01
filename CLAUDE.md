@@ -27,6 +27,13 @@ affiliation with it.**
    gitignored local notes. Personal or career context does not go in tracked
    files.
 5. **`.claude/` stays untracked.**
+6. **The author has to explain this work in person to fusion physicists.** Code
+   she cannot narrate is a liability, not an asset. So: explain the mechanism
+   and the tradeoff, not just the diff; define domain jargon the first time it
+   appears; state each piece's honest limits so they can be volunteered before
+   being challenged; and check understanding by posing the question an expert
+   would ask rather than assuming silence means it landed. Teaching beats speed
+   when the two conflict.
 
 ## Commands
 
