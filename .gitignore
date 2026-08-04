@@ -16,6 +16,9 @@ env/
 data/raw/*
 data/processed/*
 data/synthetic/*
+# Generated Grad-Shafranov training sets (large, reproducible via
+# scripts/generate_gs_dataset.py)
+data/*.npz
 !data/**/.gitkeep
 
 # Jupyter
