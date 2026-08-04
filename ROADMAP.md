@@ -83,8 +83,8 @@ Change the foundation before writing reports about it, or the reports go stale.
 
 | # | Item | Awesome | Effort | Status |
 |---|------|---------|--------|--------|
-| 3.1 | **Close the physics loop honestly.** Persist the full psi (flux) map from TokaMaker and render the real thing. Deletes the "illustrative" caveat on the equilibrium view and enables a true forward-model "measured vs. simulated" comparison. | 4 | M | TODO |
-| 3.2 | **Extend the surrogate to q95, beta_pol, li** once psi maps make them non-circular. Closes the Phase 0.5 deviation. | 4 | M | TODO |
+| 3.1 | **Close the physics loop honestly.** Persist the full psi (flux) map from TokaMaker and render the real thing. Deletes the "illustrative" caveat on the equilibrium view and enables a true forward-model "measured vs. simulated" comparison. **Unblocked:** `scripts/generate_gs_dataset.py --save-psi` now stores nodal psi per solve. | 4 | M | TODO |
+| 3.2 | **Extend the surrogate to q95, beta_pol, li** once psi maps make them non-circular. Closes the Phase 0.5 deviation. **Unblocked and measured:** across 2000 GS equilibria, Ip explains 42% of q95's variance, 7% of beta_pol's, 6% of l_i's, so they carry independent information. W_MHD measures 97% and stays excluded. See `scripts/check_gs_dataset.py`. | 4 | M | TODO |
 
 ## Phase 4: Measure what you built
 
@@ -159,6 +159,8 @@ turning working code into a followable workflow.
 | 10.2 | **Notebook: reconstruction.** From signals back to plasma parameters, showing the iterative solve rather than hiding it behind a CLI. | 5 | M | TODO |
 | 10.3 | **Notebook: the ML surrogate.** Generate a dataset, train, benchmark against the classical inversion, examine failure modes honestly. | 5 | M | TODO |
 | 10.4 | **Interactive noise control in the dashboard.** Sensor noise is hardcoded at 2% and invisible in the UI. A slider from 0 to ~10% makes noise susceptibility something a viewer can explore, reusing the Phase 4.1 study. | 4 | S | TODO |
+| 10.6 | **Grad-Shafranov training set.** Drive TokaMaker across randomized plasma states, evaluate the 130 diagnostics on each solved equilibrium, and label with the equilibrium's own measured parameters. Lets the surrogate be trained and benchmarked against real physics rather than the reduced model. | 5 | M | DONE |
+| 10.7 | **Train the surrogate on the GS dataset.** Makes "faster than TokaMaker" an honest claim (261 ms per solve versus roughly 1 us) instead of a reduced-model comparison. Depends on 10.6. | 5 | M | TODO |
 | 10.5 | **Characterize the training distribution.** Robustness to noise and sensor loss is a property of the training distribution and loss function, not a separate feature. Document what distribution the surrogate was trained on and where a real equilibrium would have to lie for its error bars to hold. Partly blocked on real data. | 4 | M | TODO |
 
 ---
