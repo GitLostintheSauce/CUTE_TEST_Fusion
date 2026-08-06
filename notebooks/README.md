@@ -2,8 +2,8 @@
 
 A followable walkthrough of the pipeline, in the style of the Open Fusion
 Toolkit's `src/examples/TokaMaker` notebooks. This means that I have the physics motivation in
-markdown, one idea per cell, and caveats stated where they apply rather than
-collected in a footnote. I am still working on this.
+the markdown, one idea per cell, and caveats stated where they apply rather than
+collected in a footnote. This is the first of my workflow notebooks, and I am still working on fine-tuning my dashboard, so I will edit this notebook accordingly.
 
 CUTE is a teaching machine, so the pipeline is more useful as something a class
 can reconstruct than as a finished application.
