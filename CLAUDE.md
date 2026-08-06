@@ -1,11 +1,11 @@
 # CLAUDE.md
 
-Working notes for Claude Code in this repository. Read this before changing
+Working notes for Claude Code in this repository. Directions for Claude to prevent miscommunication: Read this before changing
 anything.
 
 ## What this project is
 
-A magnetic equilibrium reconstruction pipeline for CUTE (Columbia University
+A magnetic equilibrium reconstruction and validation pipeline for CUTE (Columbia University
 Tokamak for Education), built on the Open Fusion Toolkit's TokaMaker
 Grad-Shafranov solver, plus a from-scratch NumPy neural surrogate that
 reconstructs plasma parameters far faster than iterative inversion.
