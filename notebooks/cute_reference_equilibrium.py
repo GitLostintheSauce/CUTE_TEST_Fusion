@@ -1,4 +1,4 @@
-"""CUTE Reference Equilibrium — Phase 2
+"""CUTE Reference Equilibrium: Phase 2
 
 This script creates a reference CUTE equilibrium using TokaMaker.
 It demonstrates:
