@@ -10,15 +10,24 @@ can reconstruct than as a finished application.
 
 | Notebook | What it covers |
 |---|---|
+| [00_machine_setup.ipynb](00_machine_setup.ipynb) | The machine: load the mesh, find the coils, solve one equilibrium, and check it four ways. Two tiers of check, machine-agnostic and published-reference. |
 | [01_synthetic_diagnostics.ipynb](01_synthetic_diagnostics.ipynb) | The forward map: from a solved equilibrium to what each of the 130 magnetic sensors would read, with measurement noise and sensor loss. |
+| [02_reconstruction.ipynb](02_reconstruction.ipynb) | The inverse map: from sensor signals back to plasma parameters by least-squares inversion. Covers the inverse crime, what noise does to the answer, and why the per-shot cost is what motivates a surrogate. |
+| [03_surrogate.ipynb](03_surrogate.ipynb) | The learned surrogate: train it, benchmark it head to head against notebook 02, then find where it fails. Sensor dropout, ensemble error bars, and whether those error bars are calibrated. |
 
-Planned: reconstruction from those signals, then the ML surrogate with its
-benchmark and failure modes.
+They are meant to be read in order. Each one ends by setting up the next.
 
 ## Running them
 
-These need the Open Fusion Toolkit installed, since they call TokaMaker
-directly. From the repository root:
+Notebooks 00 and 01 need the Open Fusion Toolkit installed, since they call
+TokaMaker directly.
+
+Notebooks 02 and 03 do **not**. They use the reduced forward model in
+`src/ml/dataset.py`, which is pure NumPy, so they run anywhere the package
+imports. That is also the honest limit of what they demonstrate, and both say
+so in their opening cell.
+
+From the repository root:
 
 ```bash
 source .venv/bin/activate
