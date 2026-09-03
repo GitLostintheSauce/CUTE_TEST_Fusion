@@ -129,7 +129,7 @@ stats = mygs.get_stats()
 ### O-point and X-points
 ```python
 mygs.o_point   # [R, Z] of magnetic axis
-mygs.diverted  # bool — True if diverted configuration
+mygs.diverted  # bool: True if diverted configuration
 xpts = mygs.get_xpoints()  # array of X-point locations
 ```
 
@@ -183,12 +183,12 @@ mygs.plot_eddy(fig, ax, dpsi_dt=mode, colormap='seismic', symmap=True)
 
 ## Gotchas
 
-1. Only ONE TokaMaker instance per Python kernel — no way around this
+1. Only ONE TokaMaker instance per Python kernel: no way around this
 2. `get_field_eval().eval(pt)` takes a single [R,Z] array, NOT separate R and Z arguments
 3. `get_stats()` may fail after `step_td()` if the plasma boundary is poorly defined (e.g. during transients). Use `o_point` directly for tracking position.
-4. `init_psi()` must be called before the first `solve()` — it sets up the initial current distribution
+4. `init_psi()` must be called before the first `solve()`: it sets up the initial current distribution
 5. `solve()` returns `None` on success, not 0 or True
-6. q0/q95 are sometimes unavailable (returned as N/A) when flux surface tracing fails at the edge — this happens for strongly shaped or diverted plasmas
+6. q0/q95 are sometimes unavailable (returned as N/A) when flux surface tracing fails at the edge: this happens for strongly shaped or diverted plasmas
 7. The mesh coordinate system uses (R, Z) in meters. The `r` attribute on TokaMaker gives node positions as Nx2 array.
 8. `set_saddles(None)` and `set_isoflux(None)` are used to clear constraints for free evolution
 9. For time-dependent solves, remove shape constraints first, then call `setup_td()`, then loop `step_td()`
