@@ -45,3 +45,8 @@ htmlcov/
 # Local session notes, not for the public repo
 HANDOFF.md
 docs/visit_script.md
+
+# Reconstruction fit files written by OFT TokaMaker reconstruction
+fit.in
+fit.out
+fit.out_*
