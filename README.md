@@ -42,6 +42,8 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
 pip install -e ".[dev]"
+# Optional: the PyTorch surrogate and notebooks/04_surrogate_pytorch.ipynb
+pip install -e ".[dev,torch]"
 
 # Generate the synthetic demo shot (used by the dashboard)
 python scripts/generate_synthetic_shot.py
@@ -104,6 +106,12 @@ position, minor radius), as a fast alternative to iterative reconstruction.
 - **From-scratch NumPy MLP** (`src/ml/mlp.py`): forward pass, backprop, Adam,
   and standardization implemented without a deep-learning framework, so the
   feature adds zero heavy dependencies and stays fully reproducible.
+- **PyTorch implementation of the same network** (`src/ml/torch_mlp.py`,
+  optional `torch` extra): same architecture, loss, regularization,
+  initialization and sensor-dropout rule. From identical weights it matches the
+  NumPy model's predictions and training steps to rounding error (about 1e-16),
+  and `notebooks/04_surrogate_pytorch.ipynb` reruns the benchmark, dropout and
+  calibration studies with it. The NumPy model is kept as the reference.
 - **Physics-grounded training data** (`src/ml/physics.py`, `dataset.py`): a
   reduced forward model built from analytic circular-loop Green's functions
   (elliptic integrals), validated to machine precision against a direct
