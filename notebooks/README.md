@@ -14,6 +14,7 @@ can reconstruct than as a finished application.
 | [01_synthetic_diagnostics.ipynb](01_synthetic_diagnostics.ipynb) | The forward map: from a solved equilibrium to what each of the 130 magnetic sensors would read, with measurement noise and sensor loss. |
 | [02_reconstruction.ipynb](02_reconstruction.ipynb) | The inverse map: from sensor signals back to plasma parameters by least-squares inversion. Covers the inverse crime, what noise does to the answer, and why the per-shot cost is what motivates a surrogate. |
 | [03_surrogate.ipynb](03_surrogate.ipynb) | The learned surrogate: train it, benchmark it head to head against notebook 02, then find where it fails. Sensor dropout, ensemble error bars, and whether those error bars are calibrated. |
+| [04_surrogate_pytorch.ipynb](04_surrogate_pytorch.ipynb) | The same surrogate in PyTorch. First proves it is the same model as notebook 03's (same predictions and same training steps from the same weights), then reruns the accuracy, speed, sensor-dropout and calibration studies side by side, and finds where aggregate R2 hides a large error at low plasma current. |
 
 They are meant to be read in order. Each one ends by setting up the next.
 
@@ -26,6 +27,10 @@ Notebooks 02 and 03 do **not**. They use the reduced forward model in
 `src/ml/dataset.py`, which is pure NumPy, so they run anywhere the package
 imports. That is also the honest limit of what they demonstrate, and both say
 so in their opening cell.
+
+Notebook 04 has the same scope as 03 and additionally needs PyTorch
+(`pip install -e ".[dev,torch]"`). It runs on the CPU; no GPU is needed.
+It takes about three minutes, most of it retraining with several seeds.
 
 From the repository root:
 

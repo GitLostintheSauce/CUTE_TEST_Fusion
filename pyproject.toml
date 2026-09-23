@@ -33,6 +33,11 @@ dev = [
 deploy = [
     "gunicorn>=21.2",
 ]
+# PyTorch surrogate (src/ml/torch_mlp.py) and notebook 04. Optional: the
+# dashboard and the Docker image serve the NumPy model and do not need it.
+torch = [
+    "torch>=2.2",
+]
 
 [project.scripts]
 cute-reconstruct = "src.reconstruct.cli:main"
