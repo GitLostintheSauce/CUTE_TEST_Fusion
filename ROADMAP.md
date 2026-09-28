@@ -34,7 +34,7 @@ Built early because it is the hook everything else hangs on.
 
 | # | Item | Awesome | Effort | Status |
 |---|------|---------|--------|--------|
-| A | **ML surrogate for equilibrium reconstruction.** Neural net maps 130 sensor signals to plasma parameters, far faster than iterative reconstruction, with a quantified accuracy and speed benchmark. Active research area (DeepMind, EPFL, PPPL). | 5 | M | DONE |
+| A | **ML surrogate for equilibrium reconstruction.** Neural net maps 64 sensor signals to plasma parameters, far faster than iterative reconstruction, with a quantified accuracy and speed benchmark. Active research area (DeepMind, EPFL, PPPL). | 5 | M | DONE |
 | B | **Reduced-physics forward model.** Analytic circular-loop Green's functions (elliptic integrals) generate a large labeled dataset without the heavy TokaMaker install; validated to machine precision against Biot-Savart quadrature. | 4 | M | DONE |
 
 Result: held-out R2 = 0.99, roughly 13,000x faster than the iterative
@@ -85,6 +85,9 @@ Change the foundation before writing reports about it, or the reports go stale.
 |---|------|---------|--------|--------|
 | 3.1 | **Close the physics loop honestly.** Persist the full psi (flux) map from TokaMaker and render the real thing. Deletes the "illustrative" caveat on the equilibrium view and enables a true forward-model "measured vs. simulated" comparison. **Unblocked:** `scripts/generate_gs_dataset.py --save-psi` now stores nodal psi per solve. | 4 | M | TODO |
 | 3.2 | **Extend the surrogate to q95, beta_pol, li** once psi maps make them non-circular. Closes the Phase 0.5 deviation. **Unblocked and measured:** across 2000 GS equilibria, Ip explains 42% of q95's variance, 7% of beta_pol's, 6% of l_i's, so they carry independent information. W_MHD measures 97% and stays excluded. See `scripts/check_gs_dataset.py`. | 4 | M | TODO |
+| 3.3 | **Use CUTE's real diagnostic layout.** Replace the invented 130-sensor layout with CUTE's 39 flux loops and 25 probe channels (`config/cute_diagnostics.json`). Retrained everything. Finding: Ip, R0, Z0 hold R2 0.986 or better, minor radius a falls from 0.95 to 0.18 because the invented layout had a sensor inside the plasma. Explained in primer Part 10. | 5 | M | DONE |
+| 3.4 | **Rerun the OFT-side results on the real layout.** `scripts/reconstruct_with_oft.py` findings, the Green's matrix conditioning, sensor-placement tests and `scripts/generate_gs_dataset.py` were all measured on the invented layout. Needs OFT installed. | 4 | M | TODO |
+| 3.5 | **Confirm the `@180` probe interpretation with the CUTE group.** The model treats the mirrored N_R of the `@180` probes as a real mounting difference (25 probe channels). If it is only a table convention, there are 13. | 3 | S | TODO |
 
 ## Phase 4: Measure what you built
 
@@ -155,7 +158,7 @@ turning working code into a followable workflow.
 
 | # | Item | Awesome | Effort | Status |
 |---|------|---------|--------|--------|
-| 10.1 | **Notebook: sensors and the forward model.** Geometry, what a given plasma produces at each of the 130 diagnostics, run it and see. Narrative form, reasoning visible. | 5 | M | TODO |
+| 10.1 | **Notebook: sensors and the forward model.** Geometry, what a given plasma produces at each of the 64 diagnostics, run it and see. Narrative form, reasoning visible. | 5 | M | TODO |
 | 10.2 | **Notebook: reconstruction.** From signals back to plasma parameters, showing the iterative solve rather than hiding it behind a CLI. | 5 | M | TODO |
 | 10.3 | **Notebook: the ML surrogate.** Generate a dataset, train, benchmark against the classical inversion, examine failure modes honestly. | 5 | M | TODO |
 | 10.4 | **Interactive noise control in the dashboard.** Sensor noise is hardcoded at 2% and invisible in the UI. A slider from 0 to ~10% makes noise susceptibility something a viewer can explore, reusing the Phase 4.1 study. | 4 | S | TODO |

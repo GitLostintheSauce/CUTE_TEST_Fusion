@@ -28,11 +28,14 @@ its own column. Finding 4 explains why a is kept apart.
    Both models are shipped: `models/surrogate.npz` (baseline) and
    `models/surrogate_robust.npz` (dropout-augmented).
 4. **Minor radius a is barely constrained** (clean R2 0.32). Every
-   CUTE sensor is outside the vessel, and seen from there the whole
-   range of a moves a typical reading by about 3%, close to the 2%
-   training noise. Under more noise or dead channels its R2 goes negative, which
-   means worse than always guessing the average. This is a limit of
-   the sensor layout and the reduced model, not of the network.
+   CUTE sensor is outside the vessel, and from there a wider current
+   channel looks almost exactly like a thin one sitting slightly further
+   out: widening it from 12 to 16 cm is copied by moving R0 out about
+   3 mm, leaving less than one noise-width that only a can explain
+   (notebooks/05_what_the_sensors_can_see.ipynb, docs/primer.md Part 10).
+   Under more noise or dead channels its R2 goes negative, which means
+   worse than always guessing the average. This is a limit of the sensor
+   layout and the reduced model, not of the network.
 
 ## 1. Noise robustness
 

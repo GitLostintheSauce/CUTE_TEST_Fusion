@@ -14,6 +14,12 @@ A complete magnetic equilibrium reconstruction pipeline for Columbia University'
 > diagnostic layout (39 flux loops, 25 magnetic probe channels). What those
 > sensors read is computed, not measured.
 
+**New to this?** Start with [docs/primer.md](docs/primer.md), a plain-language
+walkthrough from "why fusion needs a magnetic bottle" to every result and
+caveat here, then the [notebooks](notebooks/README.md) in order.
+
+![CUTE magnetic diagnostics](docs/cute_sensors.png)
+
 > Coverage note: the badge reports what CI verifies (52%), where the 48
 > solver-dependent tests skip because the Open Fusion Toolkit is not currently
 > importable on the runner. With OFT installed locally the full suite runs
@@ -137,16 +143,29 @@ Results on a held-out set of 1,600 synthetic shots at 2% sensor noise
 | Inference | ~1.3 µs/shot |
 | Speedup vs. iterative baseline | ~12,600× |
 
-**Minor radius is barely measured, and that is the honest result.** With the
-earlier invented sensor layout, `a` scored R² 0.95. That layout put one flux
-loop 1.3 cm from the plasma center, inside the plasma, where the plasma's size
-is easy to see. CUTE's real sensors all sit outside the vessel. From there the
-full range of `a` moves a typical reading by about 3%, close to the 2% noise,
-so neither the network nor the least-squares baseline can pin it down. Current
-and position are unaffected. Getting `a` properly needs physics this reduced
-model lacks: in a real equilibrium the boundary is set by where the plasma
-touches the wall or an X-point, which the Grad-Shafranov training set
-(`scripts/generate_gs_dataset.py`) captures.
+**Minor radius is barely measured, and that is the honest result.** In the
+reduced model, `a` sets the width of the plasma's current channel. Outside a
+round current, the field depends almost only on the total current and where its
+center is (the magnetic version of gravity outside a planet). In a ring-shaped
+tokamak that rule bends slightly, and a wider current ends up looking from
+outside almost exactly like a thin one sitting a little further out. Widening
+the channel from 12 to 16 cm is a clearly visible change, but moving R0 out
+2.8 mm copies all of it except less than one noise-width. The readings cannot
+tell "wider" from "slightly further out", so neither the network nor the
+least-squares baseline can pin `a` down; the best any method could do is a
+134 mm error, more than its whole range. It is a
+simplified version of a textbook limit of magnetic reconstruction: outside
+measurements fix the current and position but not how the current is spread
+inside.
+
+With the earlier invented sensor layout, `a` scored R² 0.95. That layout put a
+flux loop 1.3 cm from the plasma center, inside the current, which no real
+machine can do. [Primer Part 10](docs/primer.md#a-worked-example-from-this-project-how-wide-is-the-current)
+works through the full argument, and
+[notebook 05](notebooks/05_what_the_sensors_can_see.ipynb) shows it in code.
+A real reconstruction finds the plasma edge from the whole Grad-Shafranov
+equilibrium, which the GS training set (`scripts/generate_gs_dataset.py`) is
+the route to.
 
 Where the speedup number comes from (`scripts/train_surrogate.py`): 16.8 ms/shot
 for the iterative baseline against 1.33 µs/shot for the surrogate, both measured

@@ -87,9 +87,9 @@ def test_surrogate_trains_to_good_accuracy():
     """End-to-end surrogate reaches strong held-out R2 on Ip, R0 and Z0.
 
     Minor radius a is left out on purpose. Seen from the real CUTE sensors,
-    all outside the vessel, the full range of a changes the typical reading by
-    about 3%, close to the 2% noise, so the reduced model barely constrains it
-    (held-out R2 about 0.2 with the full training run).
+    all outside the vessel, a wider current channel looks almost exactly like a
+    thin one shifted slightly outward in R0, so the readings barely constrain a
+    (held-out R2 about 0.2 with the full training run). See notebook 05.
     """
     _, _, metrics = train_surrogate(n_samples=2000, epochs=150, seed=0)
     for name in ("Ip", "R0", "Z0"):

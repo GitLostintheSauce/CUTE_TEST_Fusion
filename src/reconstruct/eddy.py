@@ -207,6 +207,11 @@ def compensate_eddy_fast(
         s_k[n] = α_k * s_k[n-1] + (1-α_k) * dI[n]
     where α_k = exp(-dt/τ_k).
 
+    The first sample is taken as the steady state the record starts from:
+    eddy currents come only from *changes* in coil current, and a change "at
+    sample 0" has no earlier sample to change from, so it is not compensated.
+    A record should therefore begin before the coil currents start moving.
+
     Args:
         measurements_timeseries: Sensor values, shape (n_times, n_sensors).
         times: Time values in seconds, shape (n_times,).
