@@ -162,8 +162,8 @@ def fit_equilibrium(
     isoflux_pts = isoflux_pts[isoflux_pts[:, 0] > 0.3, :]
     isoflux_pts = np.vstack((isoflux_pts, np.array([[0.15, 0.0]])))
     x_points = np.array([[0.22, -0.33], [0.20, 0.34]])
-    mygs.set_saddles(x_points)
-    mygs.set_isoflux(np.vstack((isoflux_pts, x_points)))
+    mygs.set_saddle_constraints(x_points)
+    mygs.set_isoflux_constraints(np.vstack((isoflux_pts, x_points)))
 
     # Initialize psi and solve initial equilibrium
     mygs.init_psi(0.32, 0.0, 0.13, 1.7, 0.4)

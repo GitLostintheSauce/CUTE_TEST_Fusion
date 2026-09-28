@@ -1249,7 +1249,7 @@ separately, never just their average.
 equilibrium that TokaMaker itself produced, and recovers it to under 1%. That
 is weaker than reconstructing someone else's equilibrium or real data, and the
 script says so. It also shows that freeing the coil currents lets a fit
-converge to the right boundary with the wrong plasma: 45 kA instead of 100 kA.
+converge to the right boundary with the wrong plasma: 47 kA instead of 100 kA.
 
 **The noise model is invented.** 2% independent Gaussian per channel. Real
 magnetics drift because signals are integrated, correlate between neighbouring

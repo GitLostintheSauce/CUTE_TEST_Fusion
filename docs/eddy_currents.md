@@ -26,15 +26,15 @@ The vessel response is calibrated using a step-response simulation in TokaMaker:
 
 1. **Baseline state**: Set all coil currents to zero (with 1μA baseline to avoid numerical issues), solve vacuum equilibrium.
 2. **Step change**: Apply a step in one coil (default: CS01, 100A).
-3. **Wall eigenmodes**: Compute wall eigenvalues via `eig_wall()`. These give the physical decay rates.
+3. **Wall eigenmodes**: Compute wall eigenvalues via `compute_wall_modes()` (called `eig_wall()` before OFT v26.9). These give the physical decay rates.
 4. **TD simulation**: Run a time-domain simulation (`setup_td` / `step_td`) for 80 steps at dt=10μs.
 5. **Eddy isolation**: Subtract the steady-state (vacuum) response from each TD snapshot. The residual is the eddy contribution.
-6. **Amplitude fitting**: Given the fixed time constants from `eig_wall`, fit the amplitude matrix A via linear least-squares: `eddy(t) ≈ Σ_k A_k · exp(-t/τ_k)`.
+6. **Amplitude fitting**: Given the fixed time constants from `compute_wall_modes`, fit the amplitude matrix A via linear least-squares: `eddy(t) ≈ Σ_k A_k · exp(-t/τ_k)`.
 7. **Normalization**: Divide amplitudes by the step magnitude to get per-unit response.
 
 The result is a `VesselResponse` object containing `time_constants` and `amplitudes`.
 
-**Important**: `eig_wall()` corrupts TokaMaker's vacuum solver state. All vacuum solves must complete before calling `eig_wall()`. The session-scoped fixture chain in `tests/conftest.py` enforces this ordering.
+**Important**: `compute_wall_modes()` corrupts TokaMaker's vacuum solver state (observed with OFT v1.0.0-beta7; the ordering is kept on v26.9). All vacuum solves must complete before calling `eig_wall()`. The session-scoped fixture chain in `tests/conftest.py` enforces this ordering.
 
 ## Compensation Algorithm
 

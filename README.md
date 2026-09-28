@@ -22,7 +22,7 @@ caveat here, then the [notebooks](notebooks/README.md) in order.
 
 > Coverage note: the badge reports what CI verifies (55%), where the 48
 > solver-dependent tests skip because the Open Fusion Toolkit is not currently
-> importable on the runner. With OFT (v1.0.0-beta7) and the optional PyTorch
+> importable on the runner. With OFT (v26.9) and the optional PyTorch
 > extra installed locally, the full suite of 173 tests passes and coverage
 > reaches 85%. Why CI cannot run them yet, and what would fix it, is in
 > roadmap 1.9 of [ROADMAP.md](ROADMAP.md).
@@ -61,7 +61,7 @@ python scripts/generate_synthetic_shot.py
 # (Optional) train the ML surrogate
 python scripts/train_surrogate.py --samples 8000 --epochs 400
 
-# Run tests (solver-dependent tests need OFT; see docs/operator_guide.md)
+# Run tests (solver-dependent tests need OFT v26.9; install steps in docs/operator_guide.md)
 pytest tests/ -v
 
 # Launch the dashboard
