@@ -27,7 +27,7 @@ def test_greens_matrix_shape(greens_state):
     _, G, coil_names, sensor_config = greens_state
 
     assert G.shape == (sensor_config.n_total, len(coil_names))
-    assert G.shape == (130, 28)
+    assert G.shape == (64, 28)
     assert not np.any(np.isnan(G)), "G contains NaN"
     assert not np.any(np.isinf(G)), "G contains Inf"
 

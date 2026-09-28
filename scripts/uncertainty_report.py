@@ -239,12 +239,37 @@ def _write_markdown(out, before, after, scales, names, nom1, nom2, path):
             f"{after.mean_sigma[n]:.4g} | {after.rmse[n]:.4g} |"
         )
 
+    corr = after.sigma_error_corr
+    informative = [n for n in names if corr[n] >= 0.1]
+    flat = [n for n in names if corr[n] < 0.1]
+    lines += [""]
+    if informative:
+        lines += [
+            f"For {', '.join(informative)} the correlation is positive but modest:",
+            "the error bar carries some signal about which reconstructions are",
+            "less reliable, but it is not a precise per-shot error predictor.",
+        ]
+    if flat:
+        lines += [
+            f"For {', '.join(flat)} it is near zero, so the calibrated bar is right",
+            "on average but says little about which individual shot is off.",
+        ]
+    if "a" in names:
+        from src.ml.dataset import PARAM_RANGES
+        lo, hi = PARAM_RANGES["a"]
+        prior_sd = (hi - lo) / 12 ** 0.5
+        a_sigma = after.mean_sigma["a"]
+        lines += [
+            "",
+            f"Minor radius a: the calibrated sigma ({a_sigma * 1e3:.0f} mm) is "
+            f"{a_sigma / prior_sd:.0%} of the",
+            f"spread of the range a is drawn from ({prior_sd * 1e3:.0f} mm for "
+            f"{lo * 1e3:.0f} to {hi * 1e3:.0f} mm).",
+            "In plain terms, the ensemble reports that the sensors barely pin a",
+            "down, which matches the validation report. That is the honest answer",
+            "for sensors that all sit outside the vessel.",
+        ]
     lines += [
-        "",
-        "These correlations are positive but modest. The uncertainty estimate",
-        "carries real signal about which reconstructions are less reliable, but",
-        "it is not a precise per-shot error predictor, and it should not be",
-        "presented as one.",
         "",
         "## Scope and caveats",
         "",

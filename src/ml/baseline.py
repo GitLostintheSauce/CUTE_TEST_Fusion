@@ -23,7 +23,7 @@ def invert_least_squares(
     """Recover [Ip, R0, Z0, a] from a sensor vector by nonlinear least squares.
 
     Args:
-        signals: Observed 130-element sensor vector.
+        signals: Observed sensor vector, one value per sensor.
         layout: Sensor layout used by the forward model.
         x0: Optional initial guess; defaults to the range midpoints.
 

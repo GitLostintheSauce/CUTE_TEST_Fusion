@@ -25,7 +25,7 @@ saddle targets and warns, because shape targets are *design* constraints
 What it does
 ------------
 1. Solves a truth equilibrium with design constraints (isoflux plus saddles).
-2. Evaluates the 130 magnetic diagnostics on it, optionally with noise. These
+2. Evaluates the 64 magnetic diagnostics on it, optionally with noise. These
    become the measurements.
 3. Clears the design constraints, perturbs the solver's starting point, and
    reconstructs from the measurements alone.
@@ -50,6 +50,11 @@ the harder and more ill-conditioned problem.
 What running this found
 -----------------------
 Three results worth keeping, all reproducible with the commands below.
+
+These were measured with the earlier invented layout of 130 sensors, before
+the real CUTE diagnostic positions (64 channels) replaced it, and have not yet
+been rerun on the real layout because that needs OFT. Result 2's noise
+argument rests on the constraint count, which has dropped from 131 to 65.
 
 1. **The reference equilibrium cannot be reconstructed, because it is not a
    free-boundary equilibrium.** The reference configuration (Ip = 200 kA,
@@ -189,7 +194,7 @@ def solve_truth(mygs, truth: dict, use_xpoints: bool):
 
 
 def measure(mygs, sensors, noise_frac: float, rng) -> tuple[dict, dict]:
-    """Evaluate the 130 diagnostics, optionally with noise.
+    """Evaluate every diagnostic, optionally with noise.
 
     Returns the measured values and the per-sensor error used to weight the
     fit. Errors are set from the noise level with a floor at 0.5% of the
@@ -399,9 +404,9 @@ def main() -> int:
     print("    sides. Only the profile scale factors and the starting point")
     print("    differ, so this is weaker than reconstructing an equilibrium")
     print("    produced by someone else's code.")
-    print("  - The sensor layout in src/forward/sensors.py is invented, not")
-    print("    CUTE's real diagnostic set, so these errors describe a")
-    print("    plausible machine rather than the actual one.")
+    print("  - Sensor positions are CUTE's real diagnostic layout, but the")
+    print("    measurements are synthetic: computed by the same solver, with")
+    print("    idealized Gaussian noise, not read from the machine.")
     if not args.fit_coils:
         print("  - Coil currents were held at their truth values, which is")
         print("    realistic (they are measured) but means this does not test")

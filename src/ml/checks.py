@@ -1,7 +1,7 @@
 """Boundary checks for surrogate inputs, targets, and saved models.
 
-NumPy broadcasting will happily subtract a 130-element mean from a
-129-element vector in some shapes, or carry a NaN from one dead probe into
+NumPy broadcasting will happily subtract a 64-element mean from a
+63-element vector in some shapes, or carry a NaN from one dead probe into
 every predicted parameter. These checks turn those cases into errors that
 say what was expected and what arrived.
 

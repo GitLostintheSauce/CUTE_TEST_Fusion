@@ -301,7 +301,7 @@ def create_app(data_dir: str | Path | None = None, token: str | None = None) -> 
         _card(
             "ML Surrogate Reconstruction (live)",
             "A neural network trained to recover plasma parameters from the "
-            "130 magnetic diagnostic signals, as a fast alternative to "
+            f"{sensor_config.n_total} magnetic diagnostic signals, as a fast alternative to "
             "iterative reconstruction. This panel is independent of the shot "
             "selected above: it draws plasmas from the reduced forward model, "
             "adds measurement noise, and reconstructs them. The surrogate "
@@ -339,7 +339,7 @@ def create_app(data_dir: str | Path | None = None, token: str | None = None) -> 
             "What-if Explorer (live surrogate)",
             "Set a plasma state by hand and watch the reconstruction respond. "
             "The sliders define the true plasma; the reduced forward model "
-            "computes the 130 sensor signals that state would produce, and "
+            f"computes the {sensor_config.n_total} sensor signals that state would produce, and "
             "the surrogate reconstructs the parameters from those signals "
             "alone. Signals here are noise-free, so this isolates the "
             "surrogate's model error from measurement error.",
@@ -1050,7 +1050,7 @@ def get_whatif_demo(ip_ka: float, r0: float, z0: float, a: float):
     _style_figure(fig, "Set vs. reconstructed plasma shape", "R (m)", "Z (m)")
     fig.update_layout(yaxis_scaleanchor="x", yaxis_scaleratio=1)
 
-    # Sensor response: what the 130 diagnostics would read for this state.
+    # Sensor response: what each diagnostic would read for this state.
     n_fl = len(layout.fl_R)
     sig_fig = go.Figure()
     sig_fig.add_trace(go.Scatter(

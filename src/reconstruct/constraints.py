@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from src.forward.filament import loop_field
 from src.forward.model import flux_loop, mirnov_probe
 from src.forward.sensors import SensorConfig
 
@@ -45,26 +46,29 @@ def sensor_ids_ordered(sensor_config: SensorConfig) -> list[str]:
 
 
 def estimate_ip_from_mirnov(
-    measurements: dict[str, float], sensor_config: SensorConfig
+    measurements: dict[str, float],
+    sensor_config: SensorConfig,
+    R0: float = 0.32,
+    Z0: float = 0.0,
 ) -> float:
-    """Estimate plasma current from Mirnov probe measurements.
+    """Rough plasma current from the magnetic probes, as a solver starting guess.
 
-    Uses a simplified Ampere's law: Ip ~ (2*pi*R_avg / mu0) * <B_pol>
-    where <B_pol> is the average poloidal field from outboard probes.
+    Treats the plasma as one circular current filament at the nominal center
+    (R0, Z0) and finds the current whose field best matches the probe readings
+    in the least-squares sense: with g_i the reading probe i would give for
+    1 A, Ip = sum(m_i g_i) / sum(g_i^2). This works for any probe layout.
+
+    Limits: the probes also see the coil fields, and the real plasma is neither
+    a thin filament nor exactly at (R0, Z0), so this is a starting value for the
+    solver, not a measurement.
     """
-    mu0 = 4.0e-7 * np.pi
+    R = np.array([s["R"] for s in sensor_config.mirnov_probes])
+    Z = np.array([s["Z"] for s in sensor_config.mirnov_probes])
+    angle = np.array([s["angle"] for s in sensor_config.mirnov_probes])
+    if R.size == 0:
+        return 200.0e3  # no probes: fall back to nominal CUTE Ip
 
-    # Use outboard Bz probes (they measure the dominant poloidal field component)
-    bz_values = []
-    for sensor in sensor_config.mirnov_probes:
-        if sensor["id"].startswith("MP_OBZ"):
-            bz_values.append(measurements[sensor["id"]])
-
-    if not bz_values:
-        return 200.0e3  # fallback to nominal CUTE Ip
-
-    avg_bz = np.mean(bz_values)
-    R_avg = 0.48  # outboard probe radius
-    # Ampere's law: B_z ~ mu0 * Ip / (2*pi*R) for a simple current loop
-    ip_est = abs(avg_bz) * 2.0 * np.pi * R_avg / mu0
-    return float(ip_est)
+    m = np.array([measurements[s["id"]] for s in sensor_config.mirnov_probes])
+    b_r, b_z = loop_field(R0, Z0, 1.0, R, Z)
+    g = b_r * np.cos(angle) + b_z * np.sin(angle)
+    return float(abs(m @ g) / (g @ g))

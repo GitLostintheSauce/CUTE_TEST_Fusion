@@ -12,7 +12,7 @@ mostly measure "reduced physics vs full physics" rather than "network vs
 classical inversion", which would inflate the number and mean less.
 
 This script removes that limitation at the source. It drives TokaMaker across a
-range of plasma states, evaluates the 130 magnetic diagnostics on each solved
+range of plasma states, evaluates the 64 magnetic diagnostics on each solved
 equilibrium with :mod:`src.forward.model`, and records the equilibrium's own
 scalar parameters as labels. A surrogate trained on the output is learning real
 Grad-Shafranov equilibria, so it can be compared against TokaMaker directly.
