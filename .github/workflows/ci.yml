@@ -17,12 +17,17 @@ jobs:
         with:
           python-version: "3.12"
 
+      # The tarball unpacks to a versioned folder name, so rename it to the
+      # path used below. The CUTE mesh is not committed (*.h5 is ignored), so
+      # fetch the identical copy from the same OFT release.
       - name: Install OFT
         run: |
           curl -sL "https://github.com/OpenFUSIONToolkit/OpenFUSIONToolkit/releases/download/v1.0.0-beta7/OpenFUSIONToolkit_v1.0.0-beta7-Ubuntu_22_04-GNU-x86_64.tar.gz" | tar xz -C /tmp
+          mv /tmp/OpenFUSIONToolkit_v1.0.0-beta7-Linux-GNU-x86_64 /tmp/OpenFUSIONToolkit
+          curl -sfL -o data/CUTE_mesh.h5 "https://raw.githubusercontent.com/OpenFUSIONToolkit/OpenFUSIONToolkit/v1.0.0-beta7/src/examples/TokaMaker/CUTE/CUTE_mesh.h5"
           echo "OFT_PATH=/tmp/OpenFUSIONToolkit" >> $GITHUB_ENV
           echo "PYTHONPATH=/tmp/OpenFUSIONToolkit/python:$PYTHONPATH" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=/tmp/OpenFUSIONToolkit/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=/tmp/OpenFUSIONToolkit/bin:$LD_LIBRARY_PATH" >> $GITHUB_ENV
           echo "/tmp/OpenFUSIONToolkit/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
