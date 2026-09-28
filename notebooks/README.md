@@ -33,11 +33,9 @@ Two older notebooks sit outside the sequence:
 The sensor positions are CUTE's real diagnostic layout, transcribed from the
 CUTE group's diagnostics table into `config/cute_diagnostics.json`: 39 flux
 loops and 25 magnetic probe channels, 64 in total. An earlier version of this
-project used an invented layout of 130 sensors. Notebooks 02 to 05 and the two
-older notebooks have been rerun with the real one. Notebook 01 needs OFT and
-has been updated in its code and text but **not rerun**, so its stored plots and
-numbers still show the old layout until someone runs it with OFT installed.
-Notebook 00 and the reference-equilibrium notebook do not use the sensors, so
+project used an invented layout of 130 sensors. Notebooks 01 to 05 and the two
+older notebooks have all been rerun with the real one (01 with OFT
+v1.0.0-beta7). Notebook 00 and the reference-equilibrium notebook do not use the sensors, so
 the change does not affect them.
 
 ## Running them

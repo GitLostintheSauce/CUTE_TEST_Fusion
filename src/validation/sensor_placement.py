@@ -66,8 +66,18 @@ def reconstruction_error_metric(G: np.ndarray, noise_std: float = 1.0) -> float:
         noise_std: Sensor noise standard deviation.
 
     Returns:
-        error: Scalar reconstruction error metric.
+        error: Scalar reconstruction error metric, or inf when the sensors
+        cannot determine every coil current at all.
+
+    A sensor set with fewer independent readings than unknowns (rank of G
+    below its number of columns) leaves some combination of coil currents
+    completely unmeasured. Its Fisher matrix is singular, and inverting it
+    anyway returns numerical garbage (even a negative "error"), so that case
+    is reported as infinite error instead. CUTE's 25 probe channels alone,
+    for example, cannot pin down 28 coil currents.
     """
+    if np.linalg.matrix_rank(G) < G.shape[1]:
+        return float("inf")
     F = fisher_information(G, noise_std)
     try:
         F_inv = np.linalg.inv(F)
@@ -145,8 +155,10 @@ def greedy_forward_selection(
         for idx in candidate_indices:
             trial = selected + [idx]
             G_trial = G[trial, :]
-            if len(trial) < n_coils:
-                # Use pseudo-inverse based metric for underdetermined systems
+            if len(trial) < n_coils or np.linalg.matrix_rank(G_trial) < n_coils:
+                # Underdetermined (too few sensors, or enough sensors that still
+                # miss some coil combination): the full metric is infinite, so
+                # rank candidates by a partial, pseudo-inverse based metric
                 try:
                     s = np.linalg.svd(G_trial, compute_uv=False)
                     # Sum of inverse squared singular values (partial A-opt)

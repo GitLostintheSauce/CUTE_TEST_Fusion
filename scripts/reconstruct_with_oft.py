@@ -51,10 +51,10 @@ What running this found
 -----------------------
 Three results worth keeping, all reproducible with the commands below.
 
-These were measured with the earlier invented layout of 130 sensors, before
-the real CUTE diagnostic positions (64 channels) replaced it, and have not yet
-been rerun on the real layout because that needs OFT. Result 2's noise
-argument rests on the constraint count, which has dropped from 131 to 65.
+All three were measured with CUTE's real diagnostic layout (64 channels: 39
+flux loops, 25 probes) on OFT v1.0.0-beta7. They were first found with an
+earlier invented layout of 130 sensors and hold on the real one; where the
+numbers changed, both are given.
 
 1. **The reference equilibrium cannot be reconstructed, because it is not a
    free-boundary equilibrium.** The reference configuration (Ip = 200 kA,
@@ -69,17 +69,27 @@ argument rests on the constraint count, which has dropped from 131 to 65.
 
 2. **A viable configuration reconstructs well.** At Ip = 100 kA, a = 0.15,
    kappa = 1.5, delta = 0.2 with no X-points, the fit converges and recovers
-   every compared quantity to under 1%, including q_95, beta_pol and l_i.
-   Those three are the ones the ML surrogate deliberately excludes as
-   circular, and here they are genuine outputs of a Grad-Shafranov solve.
-   Adding 2% sensor noise barely moves the result, because 131 constraints
-   against 2 free parameters averages the noise out.
+   every compared quantity to under 1% (the worst is kappa at 0.50%),
+   including q_95, beta_pol and l_i. Those three are the ones the ML
+   surrogate deliberately excludes as circular, and here they are genuine
+   outputs of a Grad-Shafranov solve. Adding 2% sensor noise barely moves the
+   result (worst 0.60%), because 65 constraints (64 sensors plus Ip) against 2
+   free parameters average the noise out.
+
+   Note a_geo, the boundary's minor radius, recovered to 0.00%. The ML
+   surrogate cannot recover its minor radius a from the same sensors
+   (docs/primer.md Part 10). The difference is instructive: here the plasma
+   edge comes out of the whole equilibrium, as the flux surface that touches
+   the wall, while the surrogate's a is the width of a rigid current disk,
+   which from outside looks like a small outward shift.
 
 3. **Freeing the coil currents makes the fit degenerate.** With --fit-coils
    there are 30 free parameters instead of 2. The fit still reports success
    (error flag 0) and still gets the boundary about right (R_geo and a_geo
-   within 0.1%), but the plasma is nonsense: Ip comes back as 2.8 kA against a
-   truth of 100 kA, beta_pol as 743 against 28, l_i as 1690 against 1.2. Many
+   within 0.1%), but the plasma is wrong: Ip comes back as 45 kA against a
+   truth of 100 kA, beta_pol as 65 against 28, l_i as 6.1 against 1.2. (With
+   the invented 130-sensor layout it was worse still: 2.8 kA, 743 and 1690.)
+   Many
    different coil-current and plasma-pressure combinations reproduce the same
    external field, so the external magnetics alone cannot separate them. This
    is why the defaults hold the coils fixed, and it is worth knowing that a

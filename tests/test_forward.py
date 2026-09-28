@@ -53,6 +53,8 @@ def _distance_to_polygon(pt, poly) -> float:
     best = np.inf
     for a, b in zip(poly, poly[1:] + poly[:1]):
         a, b = np.asarray(a), np.asarray(b)
+        if np.array_equal(a, b):
+            continue  # the contours close on a repeated point
         t = np.clip(np.dot(p - a, b - a) / np.dot(b - a, b - a), 0.0, 1.0)
         best = min(best, float(np.linalg.norm(p - (a + t * (b - a)))))
     return best

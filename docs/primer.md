@@ -1244,10 +1244,12 @@ of the plasma (Part 10). The earlier score of 0.95 came
 from an invented sensor sitting inside the plasma. Report the four $R^2$ values
 separately, never just their average.
 
-**The reconstruction findings in `scripts/reconstruct_with_oft.py` predate the
-real layout.** They were measured with the invented 130 sensors and have not
-been rerun on the real 64, because that needs the Open Fusion Toolkit
-installed. They are labeled as such in the script.
+**The full reconstruction is tested against its own solver.**
+`scripts/reconstruct_with_oft.py` reconstructs, from CUTE's 64 sensors, an
+equilibrium that TokaMaker itself produced, and recovers it to under 1%. That
+is weaker than reconstructing someone else's equilibrium or real data, and the
+script says so. It also shows that freeing the coil currents lets a fit
+converge to the right boundary with the wrong plasma: 45 kA instead of 100 kA.
 
 **The noise model is invented.** 2% independent Gaussian per channel. Real
 magnetics drift because signals are integrated, correlate between neighbouring

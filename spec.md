@@ -493,7 +493,7 @@ data/
 ## Phase 8a: Green's Function Matrix & EFIT-Style Reconstruction ✅ COMPLETE
 
 **Depends on:** Phase 7 (all prior phases complete)
-**Status:** Complete: all 11 AUTO tests pass (8a.1–8a.11). Green's matrix (130×28 with the earlier invented layout, rank 28, cond ~1084; 64×28 with the real layout, not yet re-measured) computed with baseline subtraction. EFIT reconstruction uses SVD-based Tikhonov regularization (λ targeting cond < 5×10⁵). Zero-noise Ip error < 2%, boundary error < 1 cm.
+**Status:** Complete: all 11 AUTO tests pass (8a.1–8a.11). Green's matrix (64×28 with CUTE's real layout, rank 28, cond ~513; the earlier invented 130-sensor layout gave 130×28, cond ~1084) computed with baseline subtraction. EFIT reconstruction uses SVD-based Tikhonov regularization (λ targeting cond < 5×10⁵). Zero-noise Ip error < 2%, boundary error < 1 cm.
 **One-shot scope:** ~6-8 hours
 
 ### Why this matters
