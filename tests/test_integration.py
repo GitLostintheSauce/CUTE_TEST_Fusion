@@ -1,4 +1,5 @@
 """Phase 9 acceptance tests: Integration pipeline and regression."""
+import os
 import subprocess
 import sys
 
@@ -100,10 +101,25 @@ def test_efit_eddy_pipeline(tokamaker_session, greens_session, eddy_session):
     )
 
 
+@pytest.mark.skipif(
+    os.environ.get("CI") == "true",
+    reason=(
+        "CI already runs every test directly. On the GitHub Linux runner the "
+        "nested rerun gets all-zero TokaMaker fields in most runs while the "
+        "direct run passes; cause not yet found (ROADMAP 1.10)."
+    ),
+)
 def test_regression():
     """[9.2] All prior tests still pass (no regressions).
 
     Runs the full test suite (excluding this test) and asserts zero failures.
+
+    Skipped in CI. Continuous integration already runs every test directly,
+    so this adds nothing there, and on the GitHub Linux runner the nested
+    rerun (a second OFT process started while the first is still alive)
+    returned all-zero fields from the very first solver test in 3 of 4 runs,
+    while the direct run passed 148 of 148 each time. It passes on macOS.
+    The cause is not yet understood; ROADMAP 1.10 tracks it.
     """
     result = subprocess.run(
         [

@@ -66,7 +66,8 @@ they spend more.
 | 1.6 | **Coverage badge** (55% CI-verified, enforced by --cov-fail-under=50; 85% locally with OFT) | 3 | S | DONE |
 | 1.7 | **CI triggers on every push**, not only pushes to main and PRs to main | 3 | S | DONE |
 | 1.8 | **Deployment config**: `wsgi.py` gunicorn entrypoint, `render.yaml` blueprint | 5 | S | DONE |
-| 1.9 | **Make OFT importable in CI.** Cause found: the release tarball unpacks to `/tmp/OpenFUSIONToolkit_v1.0.0-beta7-Linux-GNU-x86_64`, but CI points PYTHONPATH at `/tmp/OpenFUSIONToolkit`, so the import fails and 48 solver tests skip; the CUTE mesh is also not committed. Fix: rename the folder, point the library path at `bin/`, and download `CUTE_mesh.h5` from the same release. Needs a push with a token that has `workflow` scope. Locally OFT adds about 21 points of coverage, so CI would rise from 55% to roughly 75% (the optional PyTorch tests account for most of the rest of the 85% seen locally). | 3 | S | IN PROGRESS |
+| 1.9 | **Make OFT importable in CI.** Fixed: the release tarball unpacks to a versioned folder name, so CI now renames it, points the library path at `bin/`, and downloads `CUTE_mesh.h5` from the same OFT release. All 48 solver tests now run and pass in CI. | 3 | S | DONE |
+| 1.10 | **Understand the nested-OFT anomaly.** On the GitHub Linux runner, `test_regression`'s nested rerun of the suite (a second OFT process started while the first is alive) got all-zero TokaMaker fields from its first solver test in 3 of 4 runs, while the direct run passed 148 of 148 every time. It never happens on macOS. Ruled out: shared temp files (OFT names them by process ID) and the field-evaluator destructor (each evaluator frees only its own copy of psi). Matters beyond tests if two OFT scripts are ever run at once on Linux. `test_regression` is skipped in CI meanwhile. | 3 | M | TODO |
 
 ## Phase 2: Housekeeping (do before anything else new)
 
