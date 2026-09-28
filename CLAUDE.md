@@ -90,8 +90,8 @@ Two facts that are easy to get wrong:
    once real flux maps exist.
 2. **The benchmark is a least-squares inversion of the same reduced model,**
    not a full Grad-Shafranov solve. Say so wherever the speedup appears.
-3. **The coverage badge reports what CI verifies (52%), not the nicer local
-   77%.** A badge CI cannot back up costs more credibility than the higher
+3. **The coverage badge reports what CI verifies (55%), not the nicer local
+   85%.** A badge CI cannot back up costs more credibility than the higher
    number buys.
 4. **Equilibrium flux contours are labeled "illustrative"** because stored
    equilibria hold only the boundary and scalars, not a psi map. Roadmap 3.1
@@ -106,9 +106,17 @@ Two facts that are easy to get wrong:
 
 ## Gotchas
 
-- **OFT is not importable in CI**, so 48 solver tests skip there (54 run).
-  The install step downloads it and passes, but the Python import fails on the
-  runner. Tracked as roadmap 1.9. This is the whole 52% vs 77% coverage gap.
+- **OFT is not importable in CI**, so 48 solver tests skip there (101 run).
+  The tarball unpacks to a versioned folder name while CI points at
+  `/tmp/OpenFUSIONToolkit`, and the CUTE mesh is not committed. Tracked as
+  roadmap 1.9. With the optional PyTorch tests (which CI also skips) this is
+  the 55% vs 85% coverage gap: locally, OFT adds about 21 points and PyTorch
+  about 9.
+- **Running with OFT locally:** the macOS release `.pkg` can be unpacked with
+  `pkgutil --expand-full` (no installer needed) into `~/opt/oft/OpenFUSIONToolkit`,
+  then run with `PYTHONPATH=~/opt/oft/OpenFUSIONToolkit/python:$PWD`. Copy
+  `CUTE_mesh.h5` from OFT's `src/examples/TokaMaker/CUTE/` into `data/` (it is
+  gitignored).
 - **The dashboard dev server does not hot-reload.** Restart it after edits or
   you will be looking at stale code.
 - **Sensor noise is currently hardcoded** at `noise_frac=0.02` in the dashboard

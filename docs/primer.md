@@ -1224,7 +1224,7 @@ as explained in Part 7. Now measured to be non-circular in the GS dataset.
 scalars but no psi map, so the contours are inferred from boundary shape rather
 than solved.
 
-**Coverage says 52%, not 77%.** OFT does not import on the CI runner, so 48
+**Coverage says 55%, not 85%.** OFT does not import on the CI runner, so 48
 solver tests skip there. The badge reports what continuous integration can
 actually verify, not the nicer local number. A badge that cannot be backed up
 costs more credibility than the higher figure buys.

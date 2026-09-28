@@ -1,11 +1,11 @@
 # CUTE Tokamak Magnetic Diagnostic Pipeline
 
 ![CI](https://github.com/GitLostintheSauce/CUTE_TEST_Fusion/actions/workflows/ci.yml/badge.svg)
-![Coverage](https://img.shields.io/badge/coverage-52%25%20(CI)-yellow.svg)
+![Coverage](https://img.shields.io/badge/coverage-55%25%20(CI)-yellow.svg)
 ![Python](https://img.shields.io/badge/python-3.12-blue.svg)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
 
-A complete magnetic equilibrium reconstruction pipeline for Columbia University's CUTE (Columbia University Tokamak for Education) spherical torus. Built on the [Open Fusion Toolkit (OFT)](https://github.com/hansec/OpenFUSIONToolkit) TokaMaker Grad-Shafranov solver, this project processes diagnostic signals, reconstructs plasma equilibria, and provides an interactive dashboard for shot review.
+A complete magnetic equilibrium reconstruction pipeline for Columbia University's CUTE (Columbia University Tokamak for Education) spherical torus. Built on the [Open Fusion Toolkit (OFT)](https://github.com/OpenFUSIONToolkit/OpenFUSIONToolkit) TokaMaker Grad-Shafranov solver, this project processes diagnostic signals, reconstructs plasma equilibria, and provides an interactive dashboard for shot review.
 
 **In one sentence:** a tokamak cannot be measured directly, so this pipeline reconstructs the invisible plasma from 64 external magnetic sensors placed where CUTE's real diagnostics are, and includes a from-scratch neural-network surrogate that does that reconstruction roughly 12,000x faster than the classical iterative method.
 
@@ -20,11 +20,13 @@ caveat here, then the [notebooks](notebooks/README.md) in order.
 
 ![CUTE magnetic diagnostics](docs/cute_sensors.png)
 
-> Coverage note: the badge reports what CI verifies (52%), where the 48
+> Coverage note: the badge reports what CI verifies (55%), where the 48
 > solver-dependent tests skip because the Open Fusion Toolkit is not currently
-> importable on the runner. With OFT installed locally the full suite runs
-> (86 tests) and coverage reaches 77%. Getting OFT working in CI is a tracked
-> TODO in [ROADMAP.md](ROADMAP.md).
+> importable on the runner. With OFT (v1.0.0-beta7) and the optional PyTorch
+> extra installed locally, the full suite of 173 tests passes and coverage
+> reaches 85%. The cause of the CI
+> problem is known and the fix is ready; see roadmap 1.9 in
+> [ROADMAP.md](ROADMAP.md).
 
 ![ML surrogate vs. iterative benchmark](docs/surrogate_benchmark.png)
 

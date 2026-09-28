@@ -63,10 +63,10 @@ they spend more.
 | 1.3 | **pre-commit hooks**: auto-format and lint on commit | 3 | S | DONE |
 | 1.4 | **Dockerfile + docker-compose** so `docker compose up` Just Works | 4 | S | DONE |
 | 1.5 | **README badges**: CI status, Python version | 4 | S | DONE |
-| 1.6 | **Coverage badge** (52% CI-verified, enforced by --cov-fail-under=50; 77% locally with OFT) | 3 | S | DONE |
+| 1.6 | **Coverage badge** (55% CI-verified, enforced by --cov-fail-under=50; 85% locally with OFT) | 3 | S | DONE |
 | 1.7 | **CI triggers on every push**, not only pushes to main and PRs to main | 3 | S | DONE |
 | 1.8 | **Deployment config**: `wsgi.py` gunicorn entrypoint, `render.yaml` blueprint | 5 | S | DONE |
-| 1.9 | **Make OFT importable in CI.** The install step downloads the toolkit and passes, but the Python import still fails on the runner, so 48 solver-dependent tests skip (44 run). That is why CI-verified coverage is 52% rather than the 77% seen locally. Fixing this would raise verified coverage substantially. | 3 | M | TODO |
+| 1.9 | **Make OFT importable in CI.** Cause found: the release tarball unpacks to `/tmp/OpenFUSIONToolkit_v1.0.0-beta7-Linux-GNU-x86_64`, but CI points PYTHONPATH at `/tmp/OpenFUSIONToolkit`, so the import fails and 48 solver tests skip; the CUTE mesh is also not committed. Fix: rename the folder, point the library path at `bin/`, and download `CUTE_mesh.h5` from the same release. Needs a push with a token that has `workflow` scope. Locally OFT adds about 21 points of coverage, so CI would rise from 55% to roughly 75% (the optional PyTorch tests account for most of the rest of the 85% seen locally). | 3 | S | IN PROGRESS |
 
 ## Phase 2: Housekeeping (do before anything else new)
 
