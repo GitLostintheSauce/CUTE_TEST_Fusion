@@ -117,11 +117,19 @@ def test_regression():
         timeout=600,
     )
     # Check that pytest exited cleanly (0 = all passed, 5 = no tests collected is OK too)
-    assert result.returncode in (0, 5), (
-        f"Regression: pytest returned {result.returncode}\n"
-        f"stdout:\n{result.stdout[-2000:]}\n"
-        f"stderr:\n{result.stderr[-1000:]}"
-    )
+    if result.returncode not in (0, 5):
+        # The tail of stdout is mostly the coverage table, so report what
+        # matters: every failing test, and the start of the first traceback.
+        out = result.stdout
+        failed = [line for line in out.splitlines() if line.startswith(("FAILED", "ERROR"))]
+        start = out.find("= FAILURES =")
+        first_tb = out[start:start + 6000] if start >= 0 else out[-2000:]
+        raise AssertionError(
+            f"Regression: pytest returned {result.returncode}\n"
+            + "\n".join(failed)
+            + f"\n\nfirst failure:\n{first_tb}\n"
+            f"stderr:\n{result.stderr[-1000:]}"
+        )
     # Ensure no failures in output
     assert "failed" not in result.stdout.lower() or "0 failed" in result.stdout.lower(), (
         f"Regression failures detected:\n{result.stdout[-2000:]}"
