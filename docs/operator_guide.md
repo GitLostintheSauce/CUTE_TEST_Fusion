@@ -152,25 +152,38 @@ viable_ids, n_viable = find_minimum_viable_set(G, sensor_ids, coil_names)
 print(f"Minimum viable set: {n_viable} sensors")
 ```
 
-## Adding a new sensor type
+## Changing the sensors
 
-### 1. Define the sensor geometry
+The sensor positions live in one data file, `config/cute_diagnostics.json`,
+transcribed from CUTE's diagnostics table. `src/forward/sensors.py` reads it;
+nothing else in the code hard-codes a sensor position or count.
 
-Edit `src/forward/sensors.py` and add sensors to `generate_cute_sensors()`:
+### Moving or adding a flux loop or probe
 
-```python
-# Example: adding Rogowski coils
-rogowski_coils = []
-for i in range(n_rogowski):
-    rogowski_coils.append({
-        "id": f"RC_{i+1:02d}",
-        "R": r_position,
-        "Z": z_position,
-        "type": "rogowski",
-    })
-```
+1. Edit `config/cute_diagnostics.json`. Flux loops need a `name`, `R` and `Z`
+   in meters; magnetic probes also need `phi_deg` (toroidal angle) and the
+   unit vector `N_R`, `N_Z` of the direction they measure.
+2. Run `pytest tests/test_forward.py`. It checks that every sensor sits on the
+   vessel, which catches typos and centimeter-for-meter slips.
+3. Everything computed from the sensors is now stale. Regenerate it:
+   `python scripts/generate_synthetic_shot.py`,
+   `python scripts/train_surrogate.py --samples 8000 --epochs 400`,
+   `python scripts/validate_surrogate.py`, `python scripts/uncertainty_report.py`,
+   and `python scripts/plot_sensor_layout.py`, then rerun the notebooks.
 
-### 2. Add the forward model
+Probe entries that repeat another probe's position and direction are dropped
+automatically, because a 2D axisymmetric model would read them identically.
+See Part 9 of `docs/primer.md` for why.
+
+### Adding a new sensor type
+
+#### 1. Define the sensor geometry
+
+Add a new list to `config/cute_diagnostics.json` (for example
+`"rogowski_coils"`), and load it in `generate_cute_sensors()` in
+`src/forward/sensors.py`, alongside the flux loops and probes.
+
+#### 2. Add the forward model
 
 Edit `src/forward/model.py` and add a new evaluation function:
 
@@ -180,7 +193,7 @@ def rogowski_coil(eval_func, sensor_pos, ...):
     ...
 ```
 
-### 3. Update the signal metadata schema
+#### 3. Update the signal metadata schema
 
 Add the new sensor type to `src/store/schemas.py`:
 
@@ -189,7 +202,7 @@ class SignalMetadata(BaseModel):
     sensor_type: Literal["flux_loop", "mirnov", "rogowski"]
 ```
 
-### 4. Add tests
+#### 4. Add tests
 
 Create tests in `tests/test_forward.py` following the existing pattern.
 
