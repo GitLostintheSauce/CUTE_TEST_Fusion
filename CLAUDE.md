@@ -108,8 +108,10 @@ Two facts that are easy to get wrong:
 
 - **OFT is not importable in CI**, so 48 solver tests skip there (101 run).
   The tarball unpacks to a versioned folder name while CI points at
-  `/tmp/OpenFUSIONToolkit`, and the CUTE mesh is not committed. Tracked as
-  roadmap 1.9. With the optional PyTorch tests (which CI also skips) this is
+  `/tmp/OpenFUSIONToolkit`, and the CUTE mesh is not committed. Fixing only
+  that is not enough: the v1.0.0-beta7 Linux build returns all-zero fields at
+  random in about 60% of CI jobs. OFT v26.9 does not, but fails one eddy test.
+  Tracked as roadmap 1.9. With the optional PyTorch tests (which CI also skips) this is
   the 55% vs 85% coverage gap: locally, OFT adds about 21 points and PyTorch
   about 9.
 - **Running with OFT locally:** the macOS release `.pkg` can be unpacked with

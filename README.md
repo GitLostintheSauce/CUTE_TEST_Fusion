@@ -24,9 +24,8 @@ caveat here, then the [notebooks](notebooks/README.md) in order.
 > solver-dependent tests skip because the Open Fusion Toolkit is not currently
 > importable on the runner. With OFT (v1.0.0-beta7) and the optional PyTorch
 > extra installed locally, the full suite of 173 tests passes and coverage
-> reaches 85%. The cause of the CI
-> problem is known and the fix is ready; see roadmap 1.9 in
-> [ROADMAP.md](ROADMAP.md).
+> reaches 85%. Why CI cannot run them yet, and what would fix it, is in
+> roadmap 1.9 of [ROADMAP.md](ROADMAP.md).
 
 ![ML surrogate vs. iterative benchmark](docs/surrogate_benchmark.png)
 
