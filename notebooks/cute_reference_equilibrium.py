@@ -78,8 +78,8 @@ isoflux_pts = isoflux_pts[isoflux_pts[:, 0] > 0.3, :]
 isoflux_pts = np.vstack((isoflux_pts, np.array([[0.15, 0.0]])))
 
 x_points = np.array([[0.22, -0.33], [0.20, 0.34]])
-mygs.set_saddles(x_points)
-mygs.set_isoflux(np.vstack((isoflux_pts, x_points)))
+mygs.set_saddle_constraints(x_points)
+mygs.set_isoflux_constraints(np.vstack((isoflux_pts, x_points)))
 
 # %% Solve static equilibrium
 mygs.init_psi(0.32, 0.0, 0.13, 1.7, 0.4)
@@ -149,8 +149,8 @@ coil_currents_static = mygs.get_coil_currents()
 psi_ic = psi_static.copy()
 
 # Remove shape constraints for free evolution
-mygs.set_saddles(None)
-mygs.set_isoflux(None)
+mygs.set_saddle_constraints(None)
+mygs.set_isoflux_constraints(None)
 
 # Setup time-dependent solver
 dt = 1.0e-4  # 0.1 ms timestep

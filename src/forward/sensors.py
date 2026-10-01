@@ -1,9 +1,34 @@
-"""Sensor geometry configuration for CUTE diagnostics."""
+"""Sensor geometry configuration for CUTE diagnostics.
+
+The positions come from ``config/cute_diagnostics.json``, a transcription of
+the CUTE group's diagnostics table: 39 flux loops and 32 magnetic probe
+entries. Every sensor sits about 0.5 cm outside the outer surface of the
+vacuum vessel in ``config/CUTE_geom.json``, which is where sensors mounted on
+the vessel wall would be, and ``tests/test_forward.py`` checks that.
+
+This project models a 2D poloidal slice and assumes the plasma is the same all
+the way around the torus (axisymmetry). Under that assumption a probe's reading
+depends only on its (R, Z) position and its direction (N_R, N_Z), not on its
+toroidal angle. So probe entries that repeat an earlier entry's position and
+direction exactly would produce identical signals, and are left out:
+
+- ``S2`` and ``S13`` at 0, 90, 180 and 270 degrees form a toroidal ring. On the
+  real machine that ring detects non-axisymmetric plasma motion, which a 2D
+  model cannot represent. Every entry in it repeats ``S02`` or ``S13``.
+
+The ``S01@180`` to ``S12@180`` probes are kept. Their N_R has the opposite
+sign to the probe at 0 degrees, so in the 2D model each pair measures two
+different combinations of B_R and B_Z. Result: 39 flux loops and 25 probes.
+"""
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
+
+DIAGNOSTICS_PATH = Path(__file__).resolve().parents[2] / "config" / "cute_diagnostics.json"
 
 
 @dataclass
@@ -26,84 +51,37 @@ class SensorConfig:
         return self.n_flux_loops + self.n_mirnov_probes
 
 
-def generate_cute_sensors() -> SensorConfig:
-    """Generate sensor positions for CUTE based on vacuum vessel geometry.
+def _channel_id(name: str) -> str:
+    """'S01@180' -> 'S01_180', so ids are plain identifiers in HDF5 and plots."""
+    return name.replace("@", "_")
 
-    Places flux loops around the inner VV surface and Mirnov probes
-    at toroidally-distributed locations on the outboard midplane and
-    along the VV contour.
+
+def generate_cute_sensors(path: Path | str = DIAGNOSTICS_PATH) -> SensorConfig:
+    """Load the CUTE sensor layout from the diagnostics table.
+
+    Each probe's direction (N_R, N_Z) becomes an angle in the poloidal plane,
+    ``atan2(N_Z, N_R)``, so the probe reads ``B_R cos(angle) + B_Z sin(angle)``
+    as :func:`src.forward.model.mirnov_probe` and the reduced model expect.
     """
-    flux_loops = []
+    table = json.loads(Path(path).read_text())
+
+    flux_loops = [
+        {"id": fl["name"], "R": float(fl["R"]), "Z": float(fl["Z"])}
+        for fl in table["flux_loops"]
+    ]
+
     mirnov_probes = []
-
-    # Flux loops: distributed around the inner VV contour
-    # CUTE VV inner contour spans roughly R=0.115-0.51, Z=-0.74 to 0.74
-    # Place 56 flux loops at regular intervals around the poloidal cross-section
-
-    # Inboard side (R ~ 0.14-0.16, various Z)
-    n_inboard = 14
-    z_inboard = np.linspace(-0.60, 0.60, n_inboard)
-    for i, z in enumerate(z_inboard):
-        flux_loops.append({"id": f"FL_IB{i+1:02d}", "R": 0.155, "Z": z})
-
-    # Outboard midplane region (various R, Z near 0)
-    n_outboard_mid = 10
-    r_outboard = np.linspace(0.25, 0.50, n_outboard_mid)
-    for i, r in enumerate(r_outboard):
-        flux_loops.append({"id": f"FL_OB{i+1:02d}", "R": r, "Z": 0.0})
-
-    # Upper outboard (R ~ 0.20-0.45, Z > 0)
-    n_upper = 16
-    angles_upper = np.linspace(0.2, 1.4, n_upper)  # poloidal angle
-    for i, theta in enumerate(angles_upper):
-        r = 0.32 + 0.18 * np.cos(theta)
-        z = 0.20 * np.sin(theta) + 0.10
-        flux_loops.append({"id": f"FL_UP{i+1:02d}", "R": max(r, 0.16), "Z": z})
-
-    # Lower outboard (mirror of upper)
-    for i, theta in enumerate(angles_upper):
-        r = 0.32 + 0.18 * np.cos(theta)
-        z = -(0.20 * np.sin(theta) + 0.10)
-        flux_loops.append({"id": f"FL_LO{i+1:02d}", "R": max(r, 0.16), "Z": z})
-
-    # Mirnov probes: measure local B-field components
-    # Distributed around the VV inner surface
-
-    # Outboard midplane probes (Br measurement)
-    n_ob_mirnov = 20
-    z_ob = np.linspace(-0.30, 0.30, n_ob_mirnov)
-    for i, z in enumerate(z_ob):
-        # Radial orientation (measuring Br)
+    seen: set[tuple[float, float, float, float]] = set()
+    for p in table["magnetic_probes"]:
+        key = (p["R"], p["Z"], p["N_R"], p["N_Z"])
+        if key in seen:
+            continue  # same reading as an earlier probe in a 2D model
+        seen.add(key)
         mirnov_probes.append({
-            "id": f"MP_OBR{i+1:02d}", "R": 0.48, "Z": z, "angle": 0.0
-        })
-
-    # Outboard midplane probes (Bz measurement)
-    n_ob_bz = 20
-    z_ob_bz = np.linspace(-0.30, 0.30, n_ob_bz)
-    for i, z in enumerate(z_ob_bz):
-        # Vertical orientation (measuring Bz)
-        mirnov_probes.append({
-            "id": f"MP_OBZ{i+1:02d}", "R": 0.48, "Z": z, "angle": np.pi / 2
-        })
-
-    # Inboard probes (Bz measurement)
-    n_ib_mirnov = 18
-    z_ib = np.linspace(-0.50, 0.50, n_ib_mirnov)
-    for i, z in enumerate(z_ib):
-        mirnov_probes.append({
-            "id": f"MP_IBZ{i+1:02d}", "R": 0.16, "Z": z, "angle": np.pi / 2
-        })
-
-    # Top/bottom probes
-    n_tb = 16
-    r_tb = np.linspace(0.20, 0.45, n_tb // 2)
-    for i, r in enumerate(r_tb):
-        mirnov_probes.append({
-            "id": f"MP_TOP{i+1:02d}", "R": r, "Z": 0.35, "angle": 0.0
-        })
-        mirnov_probes.append({
-            "id": f"MP_BOT{i+1:02d}", "R": r, "Z": -0.35, "angle": 0.0
+            "id": _channel_id(p["name"]),
+            "R": float(p["R"]),
+            "Z": float(p["Z"]),
+            "angle": float(np.arctan2(p["N_Z"], p["N_R"])),
         })
 
     return SensorConfig(flux_loops=flux_loops, mirnov_probes=mirnov_probes)

@@ -47,6 +47,7 @@ def compute_vessel_response(
     n_modes: int = 3,
     dt: float = 1e-5,
     n_steps: int = 80,
+    n_settle: int = 120,
 ) -> VesselResponse:
     """Compute the VV eddy current response using a TD step simulation.
 
@@ -60,7 +61,10 @@ def compute_vessel_response(
         step_amplitude: Step change magnitude in Amperes.
         n_modes: Number of exponential modes to fit.
         dt: Time step for TD simulation in seconds.
-        n_steps: Number of TD time steps.
+        n_steps: Number of TD time steps recorded for the fit.
+        n_settle: Further TD steps run after the recorded window, so the
+            vessel currents die away; the final state is the settled
+            reference the eddy signal is measured against.
 
     Returns:
         VesselResponse with fitted time constants and amplitudes.
@@ -81,29 +85,22 @@ def compute_vessel_response(
             )
         return vec
 
-    # Compute steady-state BEFORE eig_wall (which corrupts vacuum solver)
     c_pre = {cn: 0.0 for cn in coil_names}
     c_pre[coil_names[0]] = 1e-6  # tiny baseline to avoid zero flux
-    mygs.set_saddles(None)
-    mygs.set_isoflux(None)
-
+    mygs.set_saddle_constraints(None)
+    mygs.set_isoflux_constraints(None)
     c_post = dict(c_pre)
     c_post[step_coil] = step_amplitude
-    mygs.set_coil_currents(c_post)
-    mygs.init_psi(0.32, 0.0, 0.13, 1.7, 0.4)
-    mygs.solve(vacuum=True)
-    y_ss = _eval_sensors()
 
-    # Initial state for TD
+    # Initial state for TD (a vacuum solve, so it must come before compute_wall_modes)
     mygs.set_coil_currents(c_pre)
     mygs.init_psi(0.32, 0.0, 0.13, 1.7, 0.4)
     mygs.solve(vacuum=True)
 
-    # Get wall eigenvalues (NOTE: eig_wall corrupts vacuum solver state,
-    # so all vacuum solves must happen before this call)
-    eigenvalues, _ = mygs.eig_wall(neigs=n_modes, pm=False)
-    eigen_rates = eigenvalues[:, 0]
-    tau_eigen = 1.0 / eigen_rates
+    # Wall L/R time constants (NOTE: compute_wall_modes corrupts vacuum solver
+    # state, so all vacuum solves must happen before this call). Unlike the
+    # older eig_wall, it returns the time constants tau directly, not 1/tau.
+    tau_eigen, _ = mygs.compute_wall_modes(nmodes=n_modes, pm=False)
 
     # Setup TD solver and apply step change
     mygs.setup_td(dt, 1e-8, 1e-8)
@@ -118,14 +115,25 @@ def compute_vessel_response(
         responses.append(_eval_sensors())
         times.append(t)
 
+    # Keep stepping until the vessel currents have died away, and take the
+    # final state as the settled reference. It comes from the same TD solver
+    # as the responses. A separate vacuum solve settles to a slightly
+    # different state (by up to 1e-5 in OFT v26.9), which would leave a
+    # constant offset in the "eddy" signal that no decaying mode can fit.
+    t = n_steps * dt
+    for _ in range(n_settle):
+        t += dt
+        mygs.step_td(t, dt)
+    y_ss = _eval_sensors()
+
     times_arr = np.array(times)
     responses_arr = np.array(responses)  # (n_steps, n_sensors)
 
-    # Eddy contribution = TD response - steady state
+    # Eddy contribution = TD response - settled state
     eddy = responses_arr - y_ss[np.newaxis, :]  # (n_steps, n_sensors)
 
     # Fit multi-exponential to each sensor's eddy response
-    # H(t) = Σ_k A_k * exp(-t/τ_k) where τ_k are from eig_wall
+    # H(t) = Σ_k A_k * exp(-t/τ_k) where τ_k are from compute_wall_modes
     # Linear least-squares for A_k given fixed τ_k
     tau_fit = tau_eigen[:n_modes]
     basis = np.exp(-times_arr[:, np.newaxis] / tau_fit[np.newaxis, :])  # (n_steps, n_modes)
@@ -206,6 +214,11 @@ def compensate_eddy_fast(
     For each mode k with time constant τ_k, the eddy state s_k evolves as:
         s_k[n] = α_k * s_k[n-1] + (1-α_k) * dI[n]
     where α_k = exp(-dt/τ_k).
+
+    The first sample is taken as the steady state the record starts from:
+    eddy currents come only from *changes* in coil current, and a change "at
+    sample 0" has no earlier sample to change from, so it is not compensated.
+    A record should therefore begin before the coil currents start moving.
 
     Args:
         measurements_timeseries: Sensor values, shape (n_times, n_sensors).

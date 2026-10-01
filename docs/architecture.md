@@ -75,14 +75,15 @@
 - **processing.py**: Orchestrates the full pipeline: dropout fix → calibrate → bandpass → notch → integrate
 
 ### `src/forward/` — Synthetic Diagnostics
-- **sensors.py**: CUTE sensor geometry — 56 flux loops + 74 Mirnov probes placed around the vacuum vessel
+- **sensors.py**: loads CUTE's real diagnostic positions from `config/cute_diagnostics.json`: 39 flux loops (FS on the vessel, FC on the center column) and 25 magnetic probe channels. Probe entries that repeat another probe's position and direction at a different toroidal angle are dropped, because a 2D axisymmetric model reads them identically. See Part 9 of `docs/primer.md` for the reasoning.
+- **filament.py**: analytic flux and field of a circular current loop (elliptic integrals). Lives here, in the layer both halves share, so the reconstruction code and the ML surrogate can both use it without importing each other.
 - **model.py**: Forward model evaluating psi and B at sensor locations via TokaMaker field evaluators
 - **noise.py**: Noise models (white, 60Hz pickup, dropout) for synthetic data generation
 
 ### `src/reconstruct/` — Equilibrium Reconstruction
-- **constraints.py**: Converts sensor measurements to/from ordered numpy vectors, estimates Ip from Mirnov data
+- **constraints.py**: Converts sensor measurements to/from ordered numpy vectors, and gives the solver a starting Ip by fitting a single current filament at the nominal plasma center to the probe readings (least squares; works for any probe layout)
 - **solver.py**: Iterative reconstruction loop — sets TokaMaker constraints from measurements, solves, checks residual, optionally refines with Jacobian-based coil current adjustment
-- **greens.py**: Green's function matrix computation (130×28) relating coil currents to sensor measurements. Uses baseline subtraction to isolate per-coil contributions. Supports HDF5 save/load for caching.
+- **greens.py**: Green's function matrix computation (64×28) relating coil currents to sensor measurements. Uses baseline subtraction to isolate per-coil contributions. Supports HDF5 save/load for caching.
 - **efit.py**: EFIT-style reconstruction using Green's functions. Decomposes `y_meas = G @ I_coils + y_plasma`, iterates between Tikhonov-regularized coil current fitting and GS plasma solve. SVD-based regularization selection targets condition number < 5×10⁵.
 - **eddy.py**: Vacuum vessel eddy current modeling and compensation. Fits multi-exponential decay from TD step-response simulation. Recursive exponential filter for O(n) real-time compensation.
 - **timeseries.py**: Loops over time slices with warm-starting (preserves psi between slices)
@@ -119,4 +120,4 @@ The EFIT method decomposes measured fields into vacuum (coil) and plasma contrib
 The vacuum vessel eddy current response is modeled as a sum of 3 exponential eigenmodes calibrated via TD step simulation. A recursive exponential filter subtracts the eddy contribution from measurements before reconstruction, improving accuracy during transient phases.
 
 ### 8. Vacuum Solver State Management
-TokaMaker's vacuum solver state is corrupted by `eig_wall()` and non-vacuum solves. The pipeline manages this by: (a) performing all vacuum-dependent computations (Green's matrix, eddy calibration) before state-corrupting operations, and (b) calling `vac_solve()` to reset the vacuum solver before subsequent equilibrium solves.
+TokaMaker's vacuum solver state is corrupted by `compute_wall_modes()` (called `eig_wall()` before OFT v26.9) and non-vacuum solves. The pipeline manages this by: (a) performing all vacuum-dependent computations (Green's matrix, eddy calibration) before state-corrupting operations, and (b) calling `vac_solve()` to reset the vacuum solver before subsequent equilibrium solves.

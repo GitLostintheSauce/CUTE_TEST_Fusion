@@ -2,6 +2,7 @@
 import numpy as np
 import pytest
 
+from src.forward.filament import MU0, biot_savart_field, loop_field, loop_flux
 from src.ml.baseline import invert_least_squares
 from src.ml.dataset import (
     PARAM_NAMES,
@@ -10,7 +11,6 @@ from src.ml.dataset import (
     generate_dataset,
 )
 from src.ml.mlp import MLPRegressor, r2_score
-from src.ml.physics import MU0, biot_savart_field, loop_field, loop_flux
 from src.ml.surrogate import predict_parameters, train_surrogate
 
 # --- physics ----------------------------------------------------------------
@@ -45,7 +45,7 @@ def test_flux_decays_with_distance():
 
 def test_dataset_shapes_and_determinism():
     X1, y1, layout = generate_dataset(n_samples=50, seed=3)
-    assert X1.shape == (50, 130)
+    assert X1.shape == (50, layout.n_sensors) == (50, 64)
     assert y1.shape == (50, 4)
     X2, y2, _ = generate_dataset(n_samples=50, seed=3)
     assert np.allclose(X1, X2) and np.allclose(y1, y2)
@@ -84,11 +84,16 @@ def test_mlp_save_load_roundtrip(tmp_path):
 # --- surrogate + baseline ---------------------------------------------------
 
 def test_surrogate_trains_to_good_accuracy():
-    """End-to-end surrogate reaches strong held-out R2 on all parameters."""
+    """End-to-end surrogate reaches strong held-out R2 on Ip, R0 and Z0.
+
+    Minor radius a is left out on purpose. Seen from the real CUTE sensors,
+    all outside the vessel, a wider current channel looks almost exactly like a
+    thin one shifted slightly outward in R0, so the readings barely constrain a
+    (held-out R2 about 0.2 with the full training run). See notebook 05.
+    """
     _, _, metrics = train_surrogate(n_samples=2000, epochs=150, seed=0)
-    assert metrics.r2_overall > 0.9
-    for name in PARAM_NAMES:
-        assert metrics.r2_per_param[name] > 0.8, f"{name} R2 too low"
+    for name in ("Ip", "R0", "Z0"):
+        assert metrics.r2_per_param[name] > 0.9, f"{name} R2 too low"
 
 
 def test_baseline_recovers_parameters():

@@ -1,5 +1,60 @@
 # Operator Guide
 
+## Installing the Open Fusion Toolkit (OFT)
+
+**What it is and when you need it.** OFT contains TokaMaker, the
+Grad-Shafranov solver behind every "real physics" result here. You only need
+it for the solver side: `src/reconstruct/`, notebooks 00 and 01, the OFT
+scripts, and the 48 solver tests. The dashboard, the ML surrogate and
+notebooks 02 to 05 run without it.
+
+**Which version.** This repository targets **OFT v26.9**. Do not use
+v1.0.0-beta7 on Linux: its Linux build returned all-zero fields at random in
+about 60% of CI runs (roadmap 1.9). v26.9 also renamed a few methods this code
+uses (`set_isoflux_constraints`, `set_saddle_constraints`,
+`compute_wall_modes`, and the reconstruction settings `fit_Pscale`,
+`fit_FFPscale`, `fitZ0`), so older versions will not run it.
+
+**macOS.** Download `OpenFUSIONToolkit_v26.9-MacOS-GNU-arm64.pkg` (or the
+`x86_64` one on an Intel Mac) from the
+[v26.9 release](https://github.com/OpenFUSIONToolkit/OpenFUSIONToolkit/releases/tag/v26.9).
+Either double-click it, which installs to `/Applications/OpenFUSIONToolkit`,
+or unpack it without an installer or admin password:
+
+```bash
+pkgutil --expand-full OpenFUSIONToolkit_v26.9-MacOS-GNU-arm64.pkg oft_pkg
+mkdir -p ~/opt/oft
+cp -R oft_pkg/*app.pkg/Payload/Applications/OpenFUSIONToolkit ~/opt/oft/
+# The installer re-signs the binaries so macOS will load them; do the same:
+for f in ~/opt/oft/OpenFUSIONToolkit/bin/*; do codesign --force -s - "$f"; done
+```
+
+**Linux.** Unpack the `Linux-GNU-x86_64` tarball from the same release. It
+unpacks to a versioned folder name, so rename it:
+
+```bash
+curl -sL https://github.com/OpenFUSIONToolkit/OpenFUSIONToolkit/releases/download/v26.9/OpenFUSIONToolkit_v26.9-Linux-GNU-x86_64.tar.gz | tar xz
+mkdir -p ~/opt/oft && mv OpenFUSIONToolkit_v26.9-Linux-GNU-x86_64 ~/opt/oft/OpenFUSIONToolkit
+```
+
+**The CUTE mesh.** The solver needs `data/CUTE_mesh.h5`, which is not
+committed (`*.h5` is ignored). Copy it from OFT's own CUTE example:
+
+```bash
+curl -sfL -o data/CUTE_mesh.h5 https://raw.githubusercontent.com/OpenFUSIONToolkit/OpenFUSIONToolkit/v26.9/src/examples/TokaMaker/CUTE/CUTE_mesh.h5
+```
+
+**Check it works.** Point Python at OFT and run the solver tests:
+
+```bash
+export PYTHONPATH=~/opt/oft/OpenFUSIONToolkit/python:$PWD
+pytest tests/ -q        # all 173 should pass, none skipped for OFT
+```
+
+If the solver tests show as *skipped*, Python cannot import OFT: check
+`PYTHONPATH`. If they *fail* with fields that are exactly zero, you are almost
+certainly on the beta7 Linux build.
+
 ## Processing a new shot
 
 ### 1. Save raw data
@@ -152,25 +207,38 @@ viable_ids, n_viable = find_minimum_viable_set(G, sensor_ids, coil_names)
 print(f"Minimum viable set: {n_viable} sensors")
 ```
 
-## Adding a new sensor type
+## Changing the sensors
 
-### 1. Define the sensor geometry
+The sensor positions live in one data file, `config/cute_diagnostics.json`,
+transcribed from CUTE's diagnostics table. `src/forward/sensors.py` reads it;
+nothing else in the code hard-codes a sensor position or count.
 
-Edit `src/forward/sensors.py` and add sensors to `generate_cute_sensors()`:
+### Moving or adding a flux loop or probe
 
-```python
-# Example: adding Rogowski coils
-rogowski_coils = []
-for i in range(n_rogowski):
-    rogowski_coils.append({
-        "id": f"RC_{i+1:02d}",
-        "R": r_position,
-        "Z": z_position,
-        "type": "rogowski",
-    })
-```
+1. Edit `config/cute_diagnostics.json`. Flux loops need a `name`, `R` and `Z`
+   in meters; magnetic probes also need `phi_deg` (toroidal angle) and the
+   unit vector `N_R`, `N_Z` of the direction they measure.
+2. Run `pytest tests/test_forward.py`. It checks that every sensor sits on the
+   vessel, which catches typos and centimeter-for-meter slips.
+3. Everything computed from the sensors is now stale. Regenerate it:
+   `python scripts/generate_synthetic_shot.py`,
+   `python scripts/train_surrogate.py --samples 8000 --epochs 400`,
+   `python scripts/validate_surrogate.py`, `python scripts/uncertainty_report.py`,
+   and `python scripts/plot_sensor_layout.py`, then rerun the notebooks.
 
-### 2. Add the forward model
+Probe entries that repeat another probe's position and direction are dropped
+automatically, because a 2D axisymmetric model would read them identically.
+See Part 9 of `docs/primer.md` for why.
+
+### Adding a new sensor type
+
+#### 1. Define the sensor geometry
+
+Add a new list to `config/cute_diagnostics.json` (for example
+`"rogowski_coils"`), and load it in `generate_cute_sensors()` in
+`src/forward/sensors.py`, alongside the flux loops and probes.
+
+#### 2. Add the forward model
 
 Edit `src/forward/model.py` and add a new evaluation function:
 
@@ -180,7 +248,7 @@ def rogowski_coil(eval_func, sensor_pos, ...):
     ...
 ```
 
-### 3. Update the signal metadata schema
+#### 3. Update the signal metadata schema
 
 Add the new sensor type to `src/store/schemas.py`:
 
@@ -189,7 +257,7 @@ class SignalMetadata(BaseModel):
     sensor_type: Literal["flux_loop", "mirnov", "rogowski"]
 ```
 
-### 4. Add tests
+#### 4. Add tests
 
 Create tests in `tests/test_forward.py` following the existing pattern.
 

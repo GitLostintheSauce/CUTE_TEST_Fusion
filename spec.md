@@ -129,11 +129,18 @@ data/
 **Goal:** Given a TokaMaker equilibrium, produce what every sensor *would* measure.
 **One-shot scope:** ~3-4 hours
 
+> **Update.** The original plan below assumed 56 flux loops and 74 Mirnov
+> probes, and the first implementation invented positions for them. That
+> layout has been replaced by CUTE's real diagnostic positions in
+> `config/cute_diagnostics.json` (JSON rather than TOML): 39 flux loops and 25
+> magnetic probe channels, 64 in total. Counts in the acceptance gates are
+> updated to match.
+
 ### Do this
 
-1. Define sensor geometry in a config file (`config/sensors.toml`):
-   - Positions (R, Z) and orientations for all 56 flux loops
-   - Positions (R, Z) and orientations for all 74 Mirnov probes
+1. Define sensor geometry in a config file (`config/cute_diagnostics.json`):
+   - Positions (R, Z) for all 39 flux loops
+   - Positions (R, Z) and orientations for all magnetic probes
    - Use CUTE design docs, or best estimates from published papers
 2. Implement in `src/forward/`:
    ```python
@@ -159,10 +166,10 @@ data/
 
 | ID | Type | Criterion | Verification |
 |----|------|-----------|--------------|
-| 3a.1 | `[SCRIPT]` | Sensor config exists and is well-formed | `python -c "import tomllib; d=tomllib.load(open('config/sensors.toml','rb')); assert len(d['flux_loops']) >= 56; assert len(d['mirnov_probes']) >= 74; print('ok')"` exits 0 |
+| 3a.1 | `[SCRIPT]` | Sensor config exists and is well-formed | `python -c "import json; d=json.load(open('config/cute_diagnostics.json')); assert len(d['flux_loops']) == 39; assert len(d['magnetic_probes']) == 32; print('ok')"` exits 0 |
 | 3a.2 | `[AUTO]` | Solov'ev analytic validation — flux loops | `tests/test_forward.py::test_flux_loop_solovev` — Compute Solov'ev equilibrium analytically, evaluate `flux_loop()` at 10 sensor locations, assert relative error < 1% vs. analytic poloidal flux |
 | 3a.3 | `[AUTO]` | Solov'ev analytic validation — Mirnov probes | `tests/test_forward.py::test_mirnov_solovev` — Same as above for `mirnov_probe()` vs. analytic B-field components, relative error < 1% |
-| 3a.4 | `[AUTO]` | Full diagnostic set returns correct shape | `tests/test_forward.py::test_full_diagnostic_set_shape` — Output has 130 columns (56 + 74 sensors) and N_timesteps rows matching input equilibrium time series |
+| 3a.4 | `[AUTO]` | Full diagnostic set returns correct shape | `tests/test_forward.py::test_full_diagnostic_set_shape`: Output has 64 columns (39 + 25 sensors) and N_timesteps rows matching input equilibrium time series |
 | 3a.5 | `[AUTO]` | Noise model: white noise has correct statistics | `tests/test_forward.py::test_white_noise_statistics` — Generate 10,000 samples with sigma=0.1, assert `abs(mean) < 0.01` and `abs(std - 0.1) < 0.01` |
 | 3a.6 | `[AUTO]` | Noise model: 60 Hz pickup has correct frequency | `tests/test_forward.py::test_60hz_pickup_frequency` — Apply FFT to noisy signal, assert peak in power spectrum is at 60 ± 1 Hz |
 | 3a.7 | `[AUTO]` | Noise model: dropout produces NaN at expected rate | `tests/test_forward.py::test_dropout_rate` — With dropout_prob=0.05, generate 10,000 samples, assert NaN fraction is 0.05 ± 0.02 |
@@ -358,7 +365,7 @@ data/
 | 5.5 | `[AUTO]` | Noisy reconstruction: q95 recovery | `tests/test_reconstruct.py::test_noisy_q95_recovery` — Same noisy input, assert `abs(reconstructed_q95 - true_q95) / true_q95 < 0.10` (10% error) |
 | 5.6 | `[AUTO]` | Noisy reconstruction: boundary recovery | `tests/test_reconstruct.py::test_noisy_boundary_recovery` — Same noisy input, assert max boundary error < 1.0 cm |
 | 5.7 | `[AUTO]` | Convergence: iteration count is bounded | `tests/test_reconstruct.py::test_convergence` — Assert reconstruction converges in < 50 iterations for the reference equilibrium |
-| 5.8 | `[AUTO]` | Residual diagnostics are populated | `tests/test_reconstruct.py::test_residual_diagnostics` — After reconstruction, assert `diagnostics.chi_squared` is a float > 0, `diagnostics.per_sensor_residual` has 130 entries, `diagnostics.condition_number` is a float > 0 |
+| 5.8 | `[AUTO]` | Residual diagnostics are populated | `tests/test_reconstruct.py::test_residual_diagnostics`: After reconstruction, assert `diagnostics.chi_squared` is a float > 0, `diagnostics.per_sensor_residual` has 64 entries, `diagnostics.condition_number` is a float > 0 |
 | 5.9 | `[AUTO]` | Time-series reconstruction warm-starts correctly | `tests/test_reconstruct.py::test_timeseries_warmstart` — Reconstruct 5 consecutive time slices. Assert slice 2-5 each converge in fewer iterations than slice 1 (warm-start benefit) |
 | 5.10 | `[AUTO]` | Time-series output has correct structure | `tests/test_reconstruct.py::test_timeseries_output_structure` — Assert output is a list of N `EquilibriumResult` objects matching the N input time slices, each with all required fields populated |
 | 5.11 | `[SCRIPT]` | CLI runs end-to-end | `cute-reconstruct --shot data/synthetic/shot_001.h5 --output /tmp/test_results.h5 && python -c "import h5py; f=h5py.File('/tmp/test_results.h5','r'); assert 'equilibrium' in f; print('ok')"` exits 0 |
@@ -486,7 +493,7 @@ data/
 ## Phase 8a: Green's Function Matrix & EFIT-Style Reconstruction ✅ COMPLETE
 
 **Depends on:** Phase 7 (all prior phases complete)
-**Status:** Complete — all 11 AUTO tests pass (8a.1–8a.11). Green's matrix (130×28, rank 28, cond ~1084) computed with baseline subtraction. EFIT reconstruction uses SVD-based Tikhonov regularization (λ targeting cond < 5×10⁵). Zero-noise Ip error < 2%, boundary error < 1 cm.
+**Status:** Complete: all 11 AUTO tests pass (8a.1–8a.11). Green's matrix (64×28 with CUTE's real layout, rank 28, cond ~513; the earlier invented 130-sensor layout gave 130×28, cond ~1084) computed with baseline subtraction. EFIT reconstruction uses SVD-based Tikhonov regularization (λ targeting cond < 5×10⁵). Zero-noise Ip error < 2%, boundary error < 1 cm.
 **One-shot scope:** ~6-8 hours
 
 ### Why this matters
@@ -497,10 +504,10 @@ The Phase 5 reconstruction re-solves the Grad-Shafranov equation with the same c
 
 1. **Compute Green's function matrix** in `src/reconstruct/greens.py`:
    - For each of the 28 coils: set unit current (all others zero), set Ip=0 (no plasma), solve vacuum field
-   - Evaluate ψ at all 56 flux loop locations and B at all 74 Mirnov probe locations
-   - Store as a 130×28 matrix `G_coils`
+   - Evaluate ψ at all 39 flux loop locations and B at all 25 magnetic probe channels
+   - Store as a 64×28 matrix `G_coils`
    - Cache the matrix to `data/greens_matrix.h5` — it depends only on geometry, compute once
-   - Also compute a "plasma Green's function" by running the reference equilibrium with zero coil currents and unit Ip → `G_plasma` (130×1 vector)
+   - Also compute a "plasma Green's function" by running the reference equilibrium with zero coil currents and unit Ip → `G_plasma` (64×1 vector)
 
 2. **Implement EFIT-style reconstruction** in `src/reconstruct/efit.py`:
    ```
@@ -548,7 +555,7 @@ The Phase 5 reconstruction re-solves the Grad-Shafranov equation with the same c
 
 | ID | Type | Criterion | Verification |
 |----|------|-----------|--------------|
-| 8a.1 | `[AUTO]` | Green's function matrix has correct shape | `tests/test_greens.py::test_greens_matrix_shape` — Assert `G_coils.shape == (130, 28)` and no NaN/Inf values |
+| 8a.1 | `[AUTO]` | Green's function matrix has correct shape | `tests/test_greens.py::test_greens_matrix_shape`: Assert `G_coils.shape == (64, 28)` and no NaN/Inf values |
 | 8a.2 | `[AUTO]` | Green's function matrix is physically correct | `tests/test_greens.py::test_greens_vacuum_consistency` — Set known coil currents, solve vacuum field, evaluate at sensors. Assert `G_coils @ I_coils` matches sensor values within 0.1% |
 | 8a.3 | `[AUTO]` | Green's function matrix is cached and loadable | `tests/test_greens.py::test_greens_cache_roundtrip` — Compute G, save to HDF5, reload, assert matrices are identical |
 | 8a.4 | `[AUTO]` | Vacuum-only reconstruction: exact coil recovery | `tests/test_efit.py::test_vacuum_coil_recovery` — Generate sensor values from known coil currents (no plasma). Reconstruct. Assert recovered coil currents match true values within 1% for each coil |
@@ -558,7 +565,7 @@ The Phase 5 reconstruction re-solves the Grad-Shafranov equation with the same c
 | 8a.8 | `[AUTO]` | EFIT reconstruction: noisy data degrades gracefully | `tests/test_efit.py::test_efit_noisy_degradation` — Reconstruct at SNR=∞, 20dB, 10dB. Assert error increases monotonically. Assert Ip error at SNR=10dB < 10% |
 | 8a.9 | `[AUTO]` | EFIT convergence: bounded iterations | `tests/test_efit.py::test_efit_convergence` — Assert EFIT converges in < 30 iterations for reference equilibrium |
 | 8a.10 | `[AUTO]` | Regularization: condition number is controlled | `tests/test_efit.py::test_regularization` — Assert condition number of regularized `G^T G + λI` is < 1e6 |
-| 8a.11 | `[AUTO]` | EFIT produces complete diagnostics | `tests/test_efit.py::test_efit_diagnostics` — Assert result contains chi_squared, per_sensor_residual (130 entries), condition_number, coil_currents (28 entries), iteration count |
+| 8a.11 | `[AUTO]` | EFIT produces complete diagnostics | `tests/test_efit.py::test_efit_diagnostics`: Assert result contains chi_squared, per_sensor_residual (64 entries), condition_number, coil_currents (28 entries), iteration count |
 | 8a.12 | `[SCRIPT]` | CLI supports `--method efit` | `cute-reconstruct --method efit --shot data/synthetic/shot_001.h5 --output /tmp/efit_test.h5 && python -c "import h5py; f=h5py.File('/tmp/efit_test.h5','r'); assert 'equilibrium' in f; print('ok')"` exits 0 |
 | 8a.13 | `[HUMAN]` | EFIT reconstruction matches constraint-based reconstruction | Plot both reconstructions side by side for the reference equilibrium. Do the flux surfaces, boundary, and Ip agree qualitatively? |
 
@@ -636,7 +643,7 @@ CUTE is still being designed and built. Sensor placement decisions are being mad
    - Use the diagonal of `(G^T G)^{-1}` as a proxy for parameter uncertainty
 
 2. **Leave-one-out analysis**:
-   - For each of the 130 sensors, remove it and reconstruct the reference equilibrium
+   - For each of the 64 sensors, remove it and reconstruct the reference equilibrium
    - Record the change in Ip error, boundary error, and chi²
    - Rank sensors by reconstruction degradation when removed
    - Identify the top-10 most critical sensors

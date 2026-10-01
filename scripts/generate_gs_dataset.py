@@ -12,7 +12,7 @@ mostly measure "reduced physics vs full physics" rather than "network vs
 classical inversion", which would inflate the number and mean less.
 
 This script removes that limitation at the source. It drives TokaMaker across a
-range of plasma states, evaluates the 130 magnetic diagnostics on each solved
+range of plasma states, evaluates the 64 magnetic diagnostics on each solved
 equilibrium with :mod:`src.forward.model`, and records the equilibrium's own
 scalar parameters as labels. A surrogate trained on the output is learning real
 Grad-Shafranov equilibria, so it can be compared against TokaMaker directly.
@@ -108,8 +108,8 @@ def apply_shape(mygs, ip: float, r0: float, z0: float, a: float,
     isoflux_pts = np.vstack((isoflux_pts, np.array([[r0 - a - 0.02, z0]])))
 
     x_points = np.array([[r0 - 0.10, z0 - 0.33], [r0 - 0.12, z0 + 0.34]])
-    mygs.set_saddles(x_points)
-    mygs.set_isoflux(np.vstack((isoflux_pts, x_points)))
+    mygs.set_saddle_constraints(x_points)
+    mygs.set_isoflux_constraints(np.vstack((isoflux_pts, x_points)))
 
     mygs.set_targets(Ip=ip, Ip_ratio=4.0)
     mygs.init_psi(r0, z0, a * 0.75, kappa, delta)

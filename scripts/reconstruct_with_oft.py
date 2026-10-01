@@ -25,7 +25,7 @@ saddle targets and warns, because shape targets are *design* constraints
 What it does
 ------------
 1. Solves a truth equilibrium with design constraints (isoflux plus saddles).
-2. Evaluates the 130 magnetic diagnostics on it, optionally with noise. These
+2. Evaluates the 64 magnetic diagnostics on it, optionally with noise. These
    become the measurements.
 3. Clears the design constraints, perturbs the solver's starting point, and
    reconstructs from the measurements alone.
@@ -40,8 +40,8 @@ someone else's equilibrium, and that limit is reported rather than hidden.
 On fitting coil currents
 ------------------------
 The default settings hold coil currents fixed (``fitCoils = False``) and free
-only the profile scale factors ``Pnorm`` (the scale on P', the pressure
-gradient) and ``alam`` (the scale on FF', the poloidal current function). That
+only the profile scale factors ``fit_Pscale`` (the scale on P', the pressure
+gradient) and ``fit_FFPscale`` (the scale on FF', the poloidal current function). That
 is physically right rather than a shortcut: on a real device the coil currents
 are measured directly, so they are known inputs. What reconstruction actually
 infers is the plasma contribution. ``--fit-coils`` frees them anyway, which is
@@ -50,6 +50,12 @@ the harder and more ill-conditioned problem.
 What running this found
 -----------------------
 Three results worth keeping, all reproducible with the commands below.
+
+All three were measured with CUTE's real diagnostic layout (64 channels: 39
+flux loops, 25 probes) on OFT v26.9, and match v1.0.0-beta7 to within a few
+hundredths of a percent. They were first found with an
+earlier invented layout of 130 sensors and hold on the real one; where the
+numbers changed, both are given.
 
 1. **The reference equilibrium cannot be reconstructed, because it is not a
    free-boundary equilibrium.** The reference configuration (Ip = 200 kA,
@@ -64,17 +70,27 @@ Three results worth keeping, all reproducible with the commands below.
 
 2. **A viable configuration reconstructs well.** At Ip = 100 kA, a = 0.15,
    kappa = 1.5, delta = 0.2 with no X-points, the fit converges and recovers
-   every compared quantity to under 1%, including q_95, beta_pol and l_i.
-   Those three are the ones the ML surrogate deliberately excludes as
-   circular, and here they are genuine outputs of a Grad-Shafranov solve.
-   Adding 2% sensor noise barely moves the result, because 131 constraints
-   against 2 free parameters averages the noise out.
+   every compared quantity to under 1% (the worst is delta at 0.55%),
+   including q_95, beta_pol and l_i. Those three are the ones the ML
+   surrogate deliberately excludes as circular, and here they are genuine
+   outputs of a Grad-Shafranov solve. Adding 2% sensor noise barely moves the
+   result (worst 0.59%), because 65 constraints (64 sensors plus Ip) against 2
+   free parameters average the noise out.
+
+   Note a_geo, the boundary's minor radius, recovered to 0.00%. The ML
+   surrogate cannot recover its minor radius a from the same sensors
+   (docs/primer.md Part 10). The difference is instructive: here the plasma
+   edge comes out of the whole equilibrium, as the flux surface that touches
+   the wall, while the surrogate's a is the width of a rigid current disk,
+   which from outside looks like a small outward shift.
 
 3. **Freeing the coil currents makes the fit degenerate.** With --fit-coils
    there are 30 free parameters instead of 2. The fit still reports success
    (error flag 0) and still gets the boundary about right (R_geo and a_geo
-   within 0.1%), but the plasma is nonsense: Ip comes back as 2.8 kA against a
-   truth of 100 kA, beta_pol as 743 against 28, l_i as 1690 against 1.2. Many
+   within 0.1%), but the plasma is wrong: Ip comes back as 47 kA against a
+   truth of 100 kA, beta_pol as 62 against 28, l_i as 5.6 against 1.2. (With
+   the invented 130-sensor layout it was worse still: 2.8 kA, 743 and 1690.)
+   Many
    different coil-current and plasma-pressure combinations reproduce the same
    external field, so the external magnetics alone cannot separate them. This
    is why the defaults hold the coils fixed, and it is worth knowing that a
@@ -176,11 +192,11 @@ def solve_truth(mygs, truth: dict, use_xpoints: bool):
 
     if use_xpoints:
         x_points = np.array([[r0 - 0.10, z0 - 0.33], [r0 - 0.12, z0 + 0.34]])
-        mygs.set_saddles(x_points)
-        mygs.set_isoflux(np.vstack((isoflux_pts, x_points)))
+        mygs.set_saddle_constraints(x_points)
+        mygs.set_isoflux_constraints(np.vstack((isoflux_pts, x_points)))
     else:
-        mygs.set_saddles(None)
-        mygs.set_isoflux(isoflux_pts)
+        mygs.set_saddle_constraints(None)
+        mygs.set_isoflux_constraints(isoflux_pts)
 
     mygs.set_targets(Ip=truth["Ip"], Ip_ratio=4.0)
     mygs.init_psi(r0, z0, a * 0.75, kappa, delta)
@@ -189,7 +205,7 @@ def solve_truth(mygs, truth: dict, use_xpoints: bool):
 
 
 def measure(mygs, sensors, noise_frac: float, rng) -> tuple[dict, dict]:
-    """Evaluate the 130 diagnostics, optionally with noise.
+    """Evaluate every diagnostic, optionally with noise.
 
     Returns the measured values and the per-sensor error used to weight the
     fit. Errors are set from the noise level with a floor at 0.5% of the
@@ -253,11 +269,11 @@ def build_reconstruction(mygs, sensors, values, errors, ip_truth, args):
     # so it enters as a constraint with an error, not as a design target.
     recon.set_Ip(ip_truth, args.ip_err * abs(ip_truth))
 
-    recon.settings.fitPnorm = True
-    recon.settings.fitAlam = True
+    recon.settings.fit_Pscale = True
+    recon.settings.fit_FFPscale = True
     recon.settings.fitCoils = args.fit_coils
     recon.settings.fitR0 = args.fit_r0
-    recon.settings.fitV0 = args.fit_r0
+    recon.settings.fitZ0 = args.fit_r0
     recon.settings.pm = args.verbose
     return recon
 
@@ -349,8 +365,8 @@ def main() -> int:
     # Clear the design constraints explicitly. reconstruct() would strip these
     # itself and warn, but doing it here makes the distinction visible: the
     # shape targets built the truth, and the reconstruction must not see them.
-    mygs.set_isoflux(None)
-    mygs.set_saddles(None)
+    mygs.set_isoflux_constraints(None)
+    mygs.set_saddle_constraints(None)
 
     if args.clear_targets:
         # The Ip target is a design constraint too. The fit gets its plasma
@@ -368,7 +384,7 @@ def main() -> int:
                   truth["kappa"] - 0.2 * p, truth["delta"] - 0.1 * p)
 
     print(f"Reconstructing (fitCoils={args.fit_coils}, "
-          f"fitPnorm=True, fitAlam=True, "
+          f"fit_Pscale=True, fit_FFPscale=True, "
           f"linearized={args.linearized}) ...")
     try:
         err_flag = recon.reconstruct(linearized_fit=args.linearized,
@@ -399,9 +415,9 @@ def main() -> int:
     print("    sides. Only the profile scale factors and the starting point")
     print("    differ, so this is weaker than reconstructing an equilibrium")
     print("    produced by someone else's code.")
-    print("  - The sensor layout in src/forward/sensors.py is invented, not")
-    print("    CUTE's real diagnostic set, so these errors describe a")
-    print("    plausible machine rather than the actual one.")
+    print("  - Sensor positions are CUTE's real diagnostic layout, but the")
+    print("    measurements are synthetic: computed by the same solver, with")
+    print("    idealized Gaussian noise, not read from the machine.")
     if not args.fit_coils:
         print("  - Coil currents were held at their truth values, which is")
         print("    realistic (they are measured) but means this does not test")

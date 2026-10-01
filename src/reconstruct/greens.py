@@ -5,8 +5,8 @@ in the vacuum (no plasma) limit:
 
     y_vacuum = G @ I_coils
 
-where y_vacuum is a vector of sensor values (130 for CUTE: 56 flux loops +
-74 Mirnov probes) and I_coils is a vector of coil currents (28 for CUTE).
+where y_vacuum is a vector of sensor values (64 for CUTE: 39 flux loops +
+25 magnetic probes) and I_coils is a vector of coil currents (28 for CUTE).
 
 G is computed by running TokaMaker with unit current in each coil (all others
 zero, no plasma) and evaluating the field at all sensor locations.
@@ -50,8 +50,8 @@ def compute_greens_matrix(
     G = np.zeros((n_sensors, n_coils))
 
     # Clear shape constraints for vacuum solve
-    mygs.set_saddles(None)
-    mygs.set_isoflux(None)
+    mygs.set_saddle_constraints(None)
+    mygs.set_isoflux_constraints(None)
 
     def _vacuum_response(current_dict):
         """Solve vacuum field and return sensor response vector."""

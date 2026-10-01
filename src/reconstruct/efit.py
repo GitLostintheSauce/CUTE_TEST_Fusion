@@ -117,8 +117,8 @@ def efit_reconstruct(
     isoflux_pts = isoflux_pts[isoflux_pts[:, 0] > 0.3, :]
     isoflux_pts = np.vstack((isoflux_pts, np.array([[0.15, 0.0]])))
     x_points = np.array([[0.22, -0.33], [0.20, 0.34]])
-    mygs.set_saddles(x_points)
-    mygs.set_isoflux(np.vstack((isoflux_pts, x_points)))
+    mygs.set_saddle_constraints(x_points)
+    mygs.set_isoflux_constraints(np.vstack((isoflux_pts, x_points)))
 
     diag = ReconstructionDiagnostics()
     diag.condition_number = cond_number

@@ -20,10 +20,68 @@ except ImportError:
 
 
 def test_sensor_config_counts():
-    """[3a.1] Sensor config has >= 56 flux loops and >= 74 Mirnov probes."""
+    """[3a.1] 39 flux loops and 25 probes: the 32 probe entries minus 7 exact repeats."""
     config = generate_cute_sensors()
-    assert config.n_flux_loops >= 56, f"Got {config.n_flux_loops} flux loops, need >= 56"
-    assert config.n_mirnov_probes >= 74, f"Got {config.n_mirnov_probes} Mirnov probes, need >= 74"
+    assert config.n_flux_loops == 39
+    assert config.n_mirnov_probes == 25
+    ids = [s["id"] for s in config.flux_loops + config.mirnov_probes]
+    assert len(set(ids)) == len(ids), "sensor ids must be unique"
+
+
+def test_probe_angle_follows_table_direction():
+    """A probe's angle points along its (N_R, N_Z) from the diagnostics table."""
+    config = generate_cute_sensors()
+    probes = {s["id"]: s for s in config.mirnov_probes}
+    # S07 is (-0.9907, -0.1359); S07@180 has N_R flipped to +0.9907.
+    assert np.cos(probes["S07"]["angle"]) == pytest.approx(-0.9907, abs=1e-4)
+    assert np.sin(probes["S07"]["angle"]) == pytest.approx(-0.1359, abs=1e-4)
+    assert np.cos(probes["S07_180"]["angle"]) == pytest.approx(0.9907, abs=1e-4)
+    assert np.cos(probes["S13"]["angle"]) == pytest.approx(1.0)
+
+
+def _polygon_contains(pt, poly) -> bool:
+    x, y = pt
+    inside = False
+    for (x1, y1), (x2, y2) in zip(poly, poly[1:] + poly[:1]):
+        if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1):
+            inside = not inside
+    return inside
+
+
+def _distance_to_polygon(pt, poly) -> float:
+    p = np.asarray(pt)
+    best = np.inf
+    for a, b in zip(poly, poly[1:] + poly[:1]):
+        a, b = np.asarray(a), np.asarray(b)
+        if np.array_equal(a, b):
+            continue  # the contours close on a repeated point
+        t = np.clip(np.dot(p - a, b - a) / np.dot(b - a, b - a), 0.0, 1.0)
+        best = min(best, float(np.linalg.norm(p - (a + t * (b - a)))))
+    return best
+
+
+def test_sensors_sit_on_the_vessel():
+    """No sensor is inside the vacuum chamber, and all are within 1.5 cm of the vessel.
+
+    Sensors mounted on the vessel land about 0.5 cm outside its outer surface,
+    so a mistyped digit or a meters-for-centimeters slip in the diagnostics
+    table would show up here. FS22 and FS25 (R = 0.162 m) sit 2 to 3 mm inside
+    the 5 mm wall itself, next to neighbours at 0.165 m; that is either a
+    groove in the wall or rounding in the table, so the test only requires
+    sensors to be outside the chamber's inner surface.
+    """
+    import json
+    from pathlib import Path
+
+    geom = json.loads((Path(__file__).parents[1] / "config" / "CUTE_geom.json").read_text())
+    inner = [tuple(p) for p in geom["vv"]["inner_contour"]]
+    outer = [tuple(p) for p in geom["vv"]["outer_contour"]]
+    config = generate_cute_sensors()
+    for s in config.flux_loops + config.mirnov_probes:
+        pt = (s["R"], s["Z"])
+        assert not _polygon_contains(pt, inner), f"{s['id']} is inside the vacuum chamber"
+        gap = _distance_to_polygon(pt, outer)
+        assert gap < 0.015, f"{s['id']} is {100 * gap:.1f} cm from the vessel"
 
 
 # --- Noise model tests ---
@@ -109,3 +167,15 @@ def test_full_diagnostic_set_shape(tokamaker_session):
     assert len(df) == 1
     n_expected = config.n_total + 1  # +1 for time column
     assert len(df.columns) == n_expected, f"Got {len(df.columns)}, expected {n_expected}"
+
+
+def test_ip_estimate_from_probes():
+    """The filament fit recovers a centered plasma's current from the probes alone."""
+    from src.ml.dataset import SensorLayout, forward_signals
+    from src.reconstruct.constraints import estimate_ip_from_mirnov, sensor_ids_ordered
+
+    config = generate_cute_sensors()
+    layout = SensorLayout.from_config(config)
+    signals = forward_signals(1.5e5, 0.32, 0.0, 0.12, layout)
+    measurements = dict(zip(sensor_ids_ordered(config), signals))
+    assert estimate_ip_from_mirnov(measurements, config) == pytest.approx(1.5e5, rel=0.1)

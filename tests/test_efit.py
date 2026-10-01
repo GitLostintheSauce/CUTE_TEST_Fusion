@@ -217,7 +217,7 @@ def test_efit_diagnostics(efit_state):
     diag = result.diagnostics
     assert isinstance(diag.chi_squared, float)
     assert diag.chi_squared >= 0
-    assert len(diag.per_sensor_residual) == 130
+    assert len(diag.per_sensor_residual) == 64
     assert isinstance(diag.condition_number, float)
     assert diag.condition_number > 0
     assert len(result.coil_currents) == 28

@@ -6,7 +6,7 @@ Two studies a reviewer will actually ask about:
    diagnostic measurement noise grows? Real magnetics are noisy, so a
    surrogate that only works on clean signals is not useful.
 
-2. **Sensor dropout.** Magnetic probes fail. If a fraction of the 130
+2. **Sensor dropout.** Magnetic probes fail. If a fraction of the 64
    channels goes dead, does the reconstruction fall apart or degrade
    gracefully?
 

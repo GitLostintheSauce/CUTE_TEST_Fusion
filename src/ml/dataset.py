@@ -2,10 +2,10 @@
 
 We model the CUTE plasma as a small disk of circular current filaments and
 evaluate the magnetic diagnostics (flux loops and Mirnov probes) analytically
-via :mod:`src.ml.physics`. Sampling many plasma states and computing their
+via :mod:`src.forward.filament`. Sampling many plasma states and computing their
 sensor signatures yields a labeled dataset:
 
-    X  sensor signals   (n_samples, n_sensors=130)
+    X  sensor signals   (n_samples, n_sensors=64)
     y  plasma parameters (n_samples, 4) = [Ip, R0, Z0, a]
 
 This is a *reduced* forward model (rigid current disk, no free-boundary
@@ -18,8 +18,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from src.forward.filament import loop_field, loop_flux
 from src.forward.sensors import SensorConfig, generate_cute_sensors
-from src.ml.physics import loop_field, loop_flux
 
 # Plasma parameter names, in the fixed order used by X/y arrays.
 PARAM_NAMES = ["Ip", "R0", "Z0", "a"]
@@ -78,7 +78,7 @@ def _plasma_filaments(Ip, R0, Z0, a, n_ring: int = 6):
 
 
 def forward_signals(Ip, R0, Z0, a, layout: SensorLayout) -> np.ndarray:
-    """Compute the 130-element sensor vector for one plasma state.
+    """Compute the sensor vector (one value per sensor) for one plasma state.
 
     Flux loops measure poloidal flux; Mirnov probes measure the B component
     along their orientation. Returns a 1-D array [flux_loops..., mirnov...].

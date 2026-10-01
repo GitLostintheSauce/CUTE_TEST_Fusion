@@ -32,8 +32,8 @@ def test_sensor_id_order_matches_layout_coordinates():
     layout = SensorLayout.from_config(config)
     ids = sensor_ids(config)
     n_fl = len(layout.fl_R)
-    assert all(i.startswith("FL_") for i in ids[:n_fl])
-    assert all(i.startswith("MP_") for i in ids[n_fl:])
+    assert all(i.startswith(("FS", "FC")) for i in ids[:n_fl])
+    assert all(i.startswith("S") for i in ids[n_fl:])
     for k, s in enumerate(config.flux_loops):
         assert (layout.fl_R[k], layout.fl_Z[k]) == (s["R"], s["Z"])
     for k, s in enumerate(config.mirnov_probes):
@@ -57,7 +57,7 @@ def test_check_schema_rejects_reordered_targets():
 
 
 def test_check_schema_rejects_wrong_sensor_count():
-    with pytest.raises(ValueError, match="129 sensors"):
+    with pytest.raises(ValueError, match=f"{N - 1} sensors"):
         check_schema(sensor_ids()[:-1], list(PARAM_NAMES))
 
 
@@ -75,8 +75,8 @@ def test_check_features_rejects_bad_shapes(shape):
 
 
 def test_check_features_names_the_count():
-    with pytest.raises(ValueError, match=f"129 sensor signals per sample; expected {N}"):
-        check_features(np.zeros((1, 129)), N)
+    with pytest.raises(ValueError, match=f"{N - 1} sensor signals per sample; expected {N}"):
+        check_features(np.zeros((1, N - 1)), N)
 
 
 @pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])

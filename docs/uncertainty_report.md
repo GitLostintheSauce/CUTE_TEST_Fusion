@@ -25,10 +25,10 @@ both directions: too wide for some parameters, too narrow for others.
 
 | Parameter | 1-sigma coverage (raw) | Verdict |
 |---|---|---|
-| Ip | 0.902 | too wide (over-cautious) |
-| R0 | 0.756 | too wide (over-cautious) |
-| Z0 | 0.882 | too wide (over-cautious) |
-| a | 0.558 | too narrow (overconfident) |
+| Ip | 0.908 | too wide (over-cautious) |
+| R0 | 0.624 | too narrow (overconfident) |
+| Z0 | 0.840 | too wide (over-cautious) |
+| a | 0.326 | too narrow (overconfident) |
 
 ## The fix: per-parameter variance recalibration
 
@@ -39,10 +39,10 @@ nonparametric variance recalibration.
 
 | Parameter | Scale factor | 1-sigma raw | 1-sigma calibrated | target 0.683 |
 |---|---|---|---|---|
-| Ip | 0.55 | 0.902 | 0.682 | |
-| R0 | 0.78 | 0.756 | 0.658 | |
-| Z0 | 0.66 | 0.882 | 0.736 | |
-| a | 1.51 | 0.558 | 0.724 | |
+| Ip | 0.50 | 0.908 | 0.660 | |
+| R0 | 1.11 | 0.624 | 0.666 | |
+| Z0 | 0.69 | 0.840 | 0.682 | |
+| a | 2.57 | 0.326 | 0.674 | |
 
 Scale factors below 1 shrink over-cautious error bars; factors above
 1 widen overconfident ones.
@@ -56,15 +56,22 @@ whether the estimate actually knows which shots are hard.
 
 | Parameter | corr(sigma, abs error) | Mean sigma (calibrated) | RMSE |
 |---|---|---|---|
-| Ip | 0.154 | 1153 | 1075 |
-| R0 | 0.424 | 0.0008706 | 0.001181 |
-| Z0 | 0.369 | 0.0009953 | 0.000979 |
-| a | 0.362 | 0.005167 | 0.005848 |
+| Ip | 0.017 | 1394 | 1290 |
+| R0 | 0.307 | 0.002294 | 0.002234 |
+| Z0 | 0.369 | 0.001397 | 0.001783 |
+| a | -0.052 | 0.03657 | 0.03133 |
 
-These correlations are positive but modest. The uncertainty estimate
-carries real signal about which reconstructions are less reliable, but
-it is not a precise per-shot error predictor, and it should not be
-presented as one.
+For R0, Z0 the correlation is positive but modest:
+the error bar carries some signal about which reconstructions are
+less reliable, but it is not a precise per-shot error predictor.
+For Ip, a it is near zero, so the calibrated bar is right
+on average but says little about which individual shot is off.
+
+Minor radius a: the calibrated sigma (37 mm) is 97% of the
+spread of the range a is drawn from (38 mm for 50 to 180 mm).
+In plain terms, the ensemble reports that the sensors barely pin a
+down, which matches the validation report. That is the honest answer
+for sensors that all sit outside the vessel.
 
 ## Scope and caveats
 

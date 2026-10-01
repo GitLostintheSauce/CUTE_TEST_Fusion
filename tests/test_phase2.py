@@ -35,8 +35,8 @@ def test_time_dependent_solve_completes(tokamaker_session):
     mygs = tokamaker_session
     _solve_reference(mygs)
 
-    mygs.set_saddles(None)
-    mygs.set_isoflux(None)
+    mygs.set_saddle_constraints(None)
+    mygs.set_isoflux_constraints(None)
 
     dt = 1.0e-4
     mygs.setup_td(dt, 1.0e-13, 1.0e-11)
