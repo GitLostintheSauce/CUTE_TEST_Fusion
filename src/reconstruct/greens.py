@@ -50,8 +50,8 @@ def compute_greens_matrix(
     G = np.zeros((n_sensors, n_coils))
 
     # Clear shape constraints for vacuum solve
-    mygs.set_saddles(None)
-    mygs.set_isoflux(None)
+    mygs.set_saddle_constraints(None)
+    mygs.set_isoflux_constraints(None)
 
     def _vacuum_response(current_dict):
         """Solve vacuum field and return sensor response vector."""

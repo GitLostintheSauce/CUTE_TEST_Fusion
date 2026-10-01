@@ -530,7 +530,7 @@ checking whether it did.
 > number everyone quotes. Beta is plasma pressure over magnetic pressure, an
 > efficiency. li describes how peaked the current profile is. In the reduced
 > model all three are formulas of Ip, hence circular; in real GS equilibria
-> they carry independent information, measured at 42%, 7% and 6% explained by
+> they carry independent information, measured at 42%, 8% and 6% explained by
 > Ip respectively.
 
 ---
@@ -1224,9 +1224,10 @@ as explained in Part 7. Now measured to be non-circular in the GS dataset.
 scalars but no psi map, so the contours are inferred from boundary shape rather
 than solved.
 
-**Coverage says 55%, not 85%.** OFT does not import on the CI runner, so 48
-solver tests skip there. The badge reports what continuous integration can
-actually verify, not the nicer local number. A badge that cannot be backed up
+**Coverage says 75%, not 85%.** Continuous integration runs every test,
+solver tests included, except the optional PyTorch ones, which it does not
+install. The badge reports what CI can actually verify, not the nicer local
+number. A badge that cannot be backed up
 costs more credibility than the higher figure buys.
 
 **The sensor positions are real; what they read is not.** The 64 channels sit
@@ -1249,7 +1250,7 @@ separately, never just their average.
 equilibrium that TokaMaker itself produced, and recovers it to under 1%. That
 is weaker than reconstructing someone else's equilibrium or real data, and the
 script says so. It also shows that freeing the coil currents lets a fit
-converge to the right boundary with the wrong plasma: 45 kA instead of 100 kA.
+converge to the right boundary with the wrong plasma: 47 kA instead of 100 kA.
 
 **The noise model is invented.** 2% independent Gaussian per channel. Real
 magnetics drift because signals are integrated, correlate between neighbouring
@@ -1381,7 +1382,7 @@ solve would mostly measure reduced physics against full physics.
 
 **11.** In the reduced dataset those quantities are computed from $I_p$ by
 formula, so predicting them would be relearning arithmetic. Measured on 2000 GS
-equilibria, $I_p$ explains only 42%, 7% and 6% of their variance, so they now
+equilibria, $I_p$ explains only 42%, 8% and 6% of their variance, so they now
 carry real information.
 
 **12.** The network would be asked to predict a number its inputs do not

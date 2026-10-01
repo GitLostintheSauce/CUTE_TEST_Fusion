@@ -120,4 +120,4 @@ The EFIT method decomposes measured fields into vacuum (coil) and plasma contrib
 The vacuum vessel eddy current response is modeled as a sum of 3 exponential eigenmodes calibrated via TD step simulation. A recursive exponential filter subtracts the eddy contribution from measurements before reconstruction, improving accuracy during transient phases.
 
 ### 8. Vacuum Solver State Management
-TokaMaker's vacuum solver state is corrupted by `eig_wall()` and non-vacuum solves. The pipeline manages this by: (a) performing all vacuum-dependent computations (Green's matrix, eddy calibration) before state-corrupting operations, and (b) calling `vac_solve()` to reset the vacuum solver before subsequent equilibrium solves.
+TokaMaker's vacuum solver state is corrupted by `compute_wall_modes()` (called `eig_wall()` before OFT v26.9) and non-vacuum solves. The pipeline manages this by: (a) performing all vacuum-dependent computations (Green's matrix, eddy calibration) before state-corrupting operations, and (b) calling `vac_solve()` to reset the vacuum solver before subsequent equilibrium solves.

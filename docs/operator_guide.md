@@ -1,5 +1,60 @@
 # Operator Guide
 
+## Installing the Open Fusion Toolkit (OFT)
+
+**What it is and when you need it.** OFT contains TokaMaker, the
+Grad-Shafranov solver behind every "real physics" result here. You only need
+it for the solver side: `src/reconstruct/`, notebooks 00 and 01, the OFT
+scripts, and the 48 solver tests. The dashboard, the ML surrogate and
+notebooks 02 to 05 run without it.
+
+**Which version.** This repository targets **OFT v26.9**. Do not use
+v1.0.0-beta7 on Linux: its Linux build returned all-zero fields at random in
+about 60% of CI runs (roadmap 1.9). v26.9 also renamed a few methods this code
+uses (`set_isoflux_constraints`, `set_saddle_constraints`,
+`compute_wall_modes`, and the reconstruction settings `fit_Pscale`,
+`fit_FFPscale`, `fitZ0`), so older versions will not run it.
+
+**macOS.** Download `OpenFUSIONToolkit_v26.9-MacOS-GNU-arm64.pkg` (or the
+`x86_64` one on an Intel Mac) from the
+[v26.9 release](https://github.com/OpenFUSIONToolkit/OpenFUSIONToolkit/releases/tag/v26.9).
+Either double-click it, which installs to `/Applications/OpenFUSIONToolkit`,
+or unpack it without an installer or admin password:
+
+```bash
+pkgutil --expand-full OpenFUSIONToolkit_v26.9-MacOS-GNU-arm64.pkg oft_pkg
+mkdir -p ~/opt/oft
+cp -R oft_pkg/*app.pkg/Payload/Applications/OpenFUSIONToolkit ~/opt/oft/
+# The installer re-signs the binaries so macOS will load them; do the same:
+for f in ~/opt/oft/OpenFUSIONToolkit/bin/*; do codesign --force -s - "$f"; done
+```
+
+**Linux.** Unpack the `Linux-GNU-x86_64` tarball from the same release. It
+unpacks to a versioned folder name, so rename it:
+
+```bash
+curl -sL https://github.com/OpenFUSIONToolkit/OpenFUSIONToolkit/releases/download/v26.9/OpenFUSIONToolkit_v26.9-Linux-GNU-x86_64.tar.gz | tar xz
+mkdir -p ~/opt/oft && mv OpenFUSIONToolkit_v26.9-Linux-GNU-x86_64 ~/opt/oft/OpenFUSIONToolkit
+```
+
+**The CUTE mesh.** The solver needs `data/CUTE_mesh.h5`, which is not
+committed (`*.h5` is ignored). Copy it from OFT's own CUTE example:
+
+```bash
+curl -sfL -o data/CUTE_mesh.h5 https://raw.githubusercontent.com/OpenFUSIONToolkit/OpenFUSIONToolkit/v26.9/src/examples/TokaMaker/CUTE/CUTE_mesh.h5
+```
+
+**Check it works.** Point Python at OFT and run the solver tests:
+
+```bash
+export PYTHONPATH=~/opt/oft/OpenFUSIONToolkit/python:$PWD
+pytest tests/ -q        # all 173 should pass, none skipped for OFT
+```
+
+If the solver tests show as *skipped*, Python cannot import OFT: check
+`PYTHONPATH`. If they *fail* with fields that are exactly zero, you are almost
+certainly on the beta7 Linux build.
+
 ## Processing a new shot
 
 ### 1. Save raw data

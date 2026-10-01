@@ -1,7 +1,7 @@
 # CUTE Tokamak Magnetic Diagnostic Pipeline
 
 ![CI](https://github.com/GitLostintheSauce/CUTE_TEST_Fusion/actions/workflows/ci.yml/badge.svg)
-![Coverage](https://img.shields.io/badge/coverage-55%25%20(CI)-yellow.svg)
+![Coverage](https://img.shields.io/badge/coverage-75%25%20(CI)-yellowgreen.svg)
 ![Python](https://img.shields.io/badge/python-3.12-blue.svg)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -20,12 +20,10 @@ caveat here, then the [notebooks](notebooks/README.md) in order.
 
 ![CUTE magnetic diagnostics](docs/cute_sensors.png)
 
-> Coverage note: the badge reports what CI verifies (55%), where the 48
-> solver-dependent tests skip because the Open Fusion Toolkit is not currently
-> importable on the runner. With OFT (v1.0.0-beta7) and the optional PyTorch
-> extra installed locally, the full suite of 173 tests passes and coverage
-> reaches 85%. Why CI cannot run them yet, and what would fix it, is in
-> roadmap 1.9 of [ROADMAP.md](ROADMAP.md).
+> Coverage note: the badge reports what CI verifies (75%). CI runs the full
+> suite, including the 48 solver tests against the Open Fusion Toolkit v26.9,
+> but not the optional PyTorch tests. With the PyTorch extra installed too, all
+> 173 tests pass locally and coverage reaches 85%.
 
 ![ML surrogate vs. iterative benchmark](docs/surrogate_benchmark.png)
 
@@ -61,7 +59,7 @@ python scripts/generate_synthetic_shot.py
 # (Optional) train the ML surrogate
 python scripts/train_surrogate.py --samples 8000 --epochs 400
 
-# Run tests (solver-dependent tests need OFT; see docs/operator_guide.md)
+# Run tests (solver-dependent tests need OFT v26.9; install steps in docs/operator_guide.md)
 pytest tests/ -v
 
 # Launch the dashboard
