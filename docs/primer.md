@@ -1295,6 +1295,21 @@ gradients through the whole simulation. That is what makes gradient-based
 optimization and control design tractable, and is likely why it came up
 alongside optimization.
 
+TORAX's default turbulence model is **QLKNN**, a neural network in DeepMind's
+`fusion_surrogates` library trained to imitate the QuaLiKiz turbulence code.
+It is the same idea as this repo's surrogate (replace a slow physics code with
+a fast network trained on its output), applied to transport instead of
+reconstruction. The coupled TokaMaker + TORAX workflow mentioned above ships in
+OFT v26.9 as `TokaMaker.pulse_design.TokaMaker_TORAX`.
+
+[docs/qlknn_poc.md](qlknn_poc.md) is a proof of concept that feeds one of this
+repo's CUTE equilibria into QLKNN. Its main lesson is a training-distribution
+one, the same kind as Part 13's: QLKNN was trained on plasmas with aspect
+ratio 3, CUTE's is under 2, so for the outer half of CUTE's radius QLKNN is
+answering a question it was never shown. A network still returns a number
+there, with no warning, which is why the proof of concept checks every input
+against the training ranges before trusting anything.
+
 ---
 
 ## Part 18: Glossary
@@ -1335,6 +1350,12 @@ alongside optimization.
 | **Calibration** | Correcting error bars so coverage matches the claim |
 | **Volt-seconds** | The transformer's budget, setting pulse length |
 | **Disruption** | Sudden loss of confinement ending a shot |
+| **Transport** | How fast heat and particles leak across the field; set mostly by turbulence |
+| **QLKNN** | Neural-network surrogate of the QuaLiKiz turbulence code; TORAX's default transport model |
+| **Gyro-Bohm units** | Turbulent fluxes as multiples of the natural diffusion rate for that temperature, field and size |
+| **Out of distribution** | An input unlike anything in a model's training data; the model still answers, unreliably |
+| **EQDSK / g-file** | Standard text file holding one equilibrium; how TokaMaker hands geometry to TORAX |
+| **COCOS** | The sign and 2-pi conventions an equilibrium file uses; EQDSK does not record its own |
 
 ---
 

@@ -166,6 +166,14 @@ turning working code into a followable workflow.
 | 10.7 | **Train the surrogate on the GS dataset.** Makes "faster than TokaMaker" an honest claim (261 ms per solve versus roughly 1 us) instead of a reduced-model comparison. Depends on 10.6. | 5 | M | TODO |
 | 10.5 | **Characterize the training distribution.** Robustness to noise and sensor loss is a property of the training distribution and loss function, not a separate feature. Document what distribution the surrogate was trained on and where a real equilibrium would have to lie for its error bars to hold. Partly blocked on real data. | 4 | M | TODO |
 
+## Phase 11: Coupling to transport (exploratory)
+
+| # | Item | Awesome | Effort | Status |
+|---|------|---------|--------|--------|
+| 11.1 | **Proof of concept: equilibrium into DeepMind's QLKNN.** Feed a TokaMaker equilibrium of CUTE, plus assumed temperature and density, into QLKNN_7_11 (`fusion_surrogates`, TORAX's default turbulence model) and find the roadblocks. Found: CUTE's aspect ratio puts the outer half of the radius outside QLKNN's training data whatever the profiles, and that is where all predicted turbulence sits; cold plasmas (below ~0.1 keV) exceed its collisionality range; the EQDSK hand-off to TORAX 1.4.3 works. See `docs/qlknn_poc.md`. | 4 | M | DONE |
+| 11.2 | **Run OFT's `TokaMaker_TORAX` coupled workflow on CUTE.** Ships in OFT v26.9 (`TokaMaker.pulse_design`). Depends on answers to the open questions in `docs/qlknn_poc.md`, chiefly which transport model suits CUTE's aspect ratio. | 5 | L | TODO |
+| 11.3 | **Check a spherical-tokamak turbulence surrogate.** `fusion_surrogates` wraps TGLFNN-UKAEA, which has a spherical tokamak version; check whether its training range covers CUTE. | 4 | M | TODO |
+
 ---
 
 ## Notes

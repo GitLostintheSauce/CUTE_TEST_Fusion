@@ -12,7 +12,7 @@ build/
 venv/
 env/
 
-# Data (large files, generated — keep .gitkeep)
+# Data (large files, generated; keep .gitkeep)
 data/raw/*
 data/processed/*
 data/synthetic/*
@@ -50,3 +50,5 @@ docs/visit_script.md
 fit.in
 fit.out
 fit.out_*
+# EQDSK exports from scripts/qlknn_poc.py (reproducible, OFT-dependent)
+data/*.geqdsk

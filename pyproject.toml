@@ -38,6 +38,12 @@ deploy = [
 torch = [
     "torch>=2.2",
 ]
+# DeepMind's QLKNN turbulence model, for the src/coupling/ proof of concept
+# (docs/qlknn_poc.md). Pinned: the library is young and the input order is
+# checked against this version.
+qlknn = [
+    "fusion_surrogates==0.4.7",
+]
 
 [project.scripts]
 cute-reconstruct = "src.reconstruct.cli:main"

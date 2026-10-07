@@ -264,6 +264,25 @@ and realized error is modest for R0 and Z0 (0.31, 0.37) and near zero for Ip
 and `a`, so the bars are right on average but are not a per-shot error
 predictor. They are not presented as one.
 
+### Experimental: coupling to DeepMind's QLKNN (proof of concept)
+
+A first attempt at handing this pipeline's output to a transport model. One
+TokaMaker equilibrium of CUTE is turned into the ten inputs of QLKNN_7_11, the
+turbulence neural network in Google DeepMind's open-source `fusion_surrogates`
+library and the default in their TORAX transport code, and the network is run
+on them. It is a roadblock finder: the equilibrium is synthetic and the
+temperature and density profiles are **assumed**, because magnetic sensors
+cannot measure them.
+
+What it found: CUTE is about twice as fat (minor over major radius 0.6) as
+the plasmas QLKNN was trained on (1/3), which puts the outer half of the
+radius outside its training data whatever the profiles are, and that outer
+half is exactly where QLKNN predicts turbulence. The geometry hand-off to
+TORAX itself works (sizes within 2%, q within a median 2.3%). OFT v26.9
+already ships a coupled TokaMaker + TORAX workflow, which is the natural next
+step. Full write-up, figure, open questions and run instructions:
+[docs/qlknn_poc.md](docs/qlknn_poc.md).
+
 ## Architecture Details
 
 See [docs/architecture.md](docs/architecture.md) for module responsibilities, design decisions, and data flow diagrams.
@@ -282,6 +301,7 @@ CUTE_TEST/
 │   ├── forward/        # Sensor config + forward model
 │   ├── reconstruct/    # Equilibrium reconstruction (constraint + EFIT + eddy)
 │   ├── validation/     # Benchmarks, validation, sensor placement
+│   ├── coupling/       # Proof of concept: equilibrium -> DeepMind's QLKNN
 │   └── dashboard/      # Plotly Dash web app
 ├── tests/              # pytest test suite (76 tests)
 ├── data/               # CUTE mesh + shot data

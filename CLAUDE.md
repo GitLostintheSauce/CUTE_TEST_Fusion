@@ -69,6 +69,7 @@ Full local suite is ~3 minutes because the solver tests actually run.
 | `src/forward/` | Sensor geometry, synthetic diagnostics from a solved equilibrium |
 | `src/ml/` | Surrogate: reduced forward model, MLP, baseline, validation, uncertainty |
 | `src/dashboard/` | Plotly Dash app. Contains no OFT code |
+| `src/coupling/` | Proof of concept: equilibrium into DeepMind's QLKNN (`docs/qlknn_poc.md`). Pure NumPy plus a lazy `fusion_surrogates` import |
 | `src/store/`, `src/signal/` | HDF5 I/O and signal conditioning |
 | `scripts/` | Regenerate shots, models, and both reports |
 | `models/` | Trained surrogate, robust variant, ensemble, metrics JSON |
@@ -78,6 +79,12 @@ Two facts that are easy to get wrong:
 - **OFT never runs in the dashboard.** Shots are pre-generated; the dashboard
   reads stored HDF5. `scripts/generate_synthetic_shot.py` is analytic and does
   not import OFT either.
+- **The QLKNN proof of concept keeps its OFT and ML halves apart too.**
+  `scripts/qlknn_poc.py` runs the TokaMaker stage and the QLKNN stage
+  separately, handing off through `models/qlknn_poc_equilibrium.json`. This is
+  the repo's separation rule, not a known incompatibility: OFT and JAX do load
+  together in the test suite. TORAX itself needs its own environment because of
+  its pinned dependencies (`docs/qlknn_poc.md`).
 - **OFT never touches the ML surrogate.** The surrogate trains on
   `src/ml/dataset.py`, the reduced analytic forward model. The OFT half and the
   ML half of the repo never call each other.
